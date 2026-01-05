@@ -18,6 +18,11 @@ interface IGame {
   currentOrder?: string;
   winner?: string;
   gameState: "deciding" | "ordering" | "solving" | "end";
+  guessStack?: {
+    word: string;
+    result: string;
+    playerId: string;
+  }[];
 }
 
 export default function GameRoom() {
@@ -131,10 +136,6 @@ export default function GameRoom() {
     }
   };
 
-  const [guessStack, setGuessStack] = useState<
-    { word: string; result: string }[]
-  >([]);
-
   const resultWord = (targetWord: string, compareWord: string) => {
     if (compareWord.length > 9) {
       const tCount: Record<string, number> = {};
@@ -208,13 +209,16 @@ export default function GameRoom() {
         setDecideText("");
         return;
       } else {
-        setGuessStack((prev) => [
-          ...prev,
-          {
-            word: decideText,
-            result: resultWord(nextPlayer.guessWord!, decideText),
-          },
-        ]);
+        const newGuess = {
+          word: decideText,
+          result: resultWord(nextPlayer.guessWord!, decideText),
+          playerId: myId,
+        };
+
+        update(gameRef, {
+          guessStack: [...(game.guessStack ?? []), newGuess],
+          currentOrder: nextPlayer.uid,
+        });
       }
 
       update(gameRef, { currentOrder: nextPlayer.uid });
@@ -223,10 +227,19 @@ export default function GameRoom() {
     }
   };
 
+  const [showMine, setShowMine] = useState(true);
+
   if (!game) return <div>로딩중...</div>;
 
   const me = myId ? game.players?.[myId] : null;
   const hasDecided = me?.isDecide;
+  const correctWord =
+    game.players &&
+    Object.values(game.players).find((p) => p.uid !== myId)?.guessWord;
+
+  const visibleGuessStack = game.guessStack?.filter((guess) =>
+    showMine ? guess.playerId === myId : guess.playerId !== myId
+  );
 
   return (
     <div>
@@ -254,11 +267,19 @@ export default function GameRoom() {
       ) : game.gameState === "solving" ? (
         <div>
           <div>
-            {guessStack.map((guess, idx) => (
-              <>
-                <p key={idx}>{guess.word}</p>
-                <p key={idx}>{guess.result}</p>
-              </>
+            <button onClick={() => setShowMine(true)} disabled={showMine}>
+              내 기록
+            </button>
+            <button onClick={() => setShowMine(false)} disabled={!showMine}>
+              상대 기록
+            </button>
+          </div>
+          <div>
+            {visibleGuessStack?.map((guess, idx) => (
+              <div key={idx}>
+                <p>{guess.word}</p>
+                <p>{guess.result}</p>
+              </div>
             ))}
           </div>
 
@@ -284,7 +305,8 @@ export default function GameRoom() {
             {!game.winner
               ? "왓"
               : game.winner !== myId
-              ? "너 짐 수고"
+              ? `너 짐 수고
+정답: ${correctWord}`
               : "올 이겼네"}
           </div>
         )
