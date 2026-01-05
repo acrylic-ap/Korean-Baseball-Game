@@ -153,7 +153,9 @@ export default function GameRoom() {
 
     const t = [...targetWord];
     const c = [...compareWord];
-    const max = Math.max(t.length, c.length);
+
+    // 🔥 compareWord 길이까지만 판단
+    const max = c.length;
 
     const result = Array(max).fill("?");
     const remain: Record<string, number> = {};
@@ -165,7 +167,7 @@ export default function GameRoom() {
 
     // 1️⃣ 정확히 일치 (O)
     for (let i = 0; i < max; i++) {
-      if (t[i] && c[i] && t[i] === c[i]) {
+      if (t[i] === c[i]) {
         result[i] = "O";
         remain[c[i]]--;
       }
@@ -176,7 +178,7 @@ export default function GameRoom() {
       if (result[i] !== "?") continue;
 
       const ch = c[i];
-      if (ch && remain[ch] > 0) {
+      if (remain[ch] > 0) {
         result[i] = "@";
         remain[ch]--;
       } else {
