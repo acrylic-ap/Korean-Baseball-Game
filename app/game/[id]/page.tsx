@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { rtdb } from "@/lib/firebase";
+import { rtdb } from "@/lib/client";
 import { ref, get, onValue, update, runTransaction } from "firebase/database";
 
 interface IPlayer {

@@ -1,5 +1,5 @@
 "use client";
-import { rtdb } from "@/lib/firebase";
+import { rtdb } from "@/lib/client";
 import {
   onValue,
   push,

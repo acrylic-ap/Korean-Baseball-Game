@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import styled from "styled-components";
-import { rtdb } from "@/lib/firebase";
+import { rtdb } from "@/lib/client";
 import {
   ref,
   onValue,
