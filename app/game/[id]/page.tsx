@@ -442,14 +442,18 @@ export default function GameRoom() {
 
   const handleSubmitDecideChange = (e: any) => {
     if (e.key === "Enter") {
-      if (!decideText || decideText.length > 9) return;
-
-      const playerRef = ref(rtdb, `games/${id}/players/${myId}`);
-
-      update(playerRef, { guessWord: decideText, isDecide: "true" });
-
-      setDecideText("");
+      submitDecide();
     }
+  };
+
+  const submitDecide = () => {
+    if (!decideText || decideText.length > 9) return;
+
+    const playerRef = ref(rtdb, `games/${id}/players/${myId}`);
+
+    update(playerRef, { guessWord: decideText, isDecide: "true" });
+
+    setDecideText("");
   };
 
   const resultWord = (targetWord: string, compareWord: string) => {
@@ -508,39 +512,43 @@ export default function GameRoom() {
 
   const handleGuessChange = (e: any) => {
     if (e.key === "Enter") {
-      if (!game) return;
-
-      if (!myId || !game.players) return;
-
-      // 두 명 플레이어
-      const players = Object.values(game.players);
-      const nextPlayer = players.find((p) => p.uid !== game.currentOrder);
-
-      if (!nextPlayer) return; // 안전망
-
-      const gameRef = ref(rtdb, `games/${id}`);
-
-      if (nextPlayer.guessWord === decideText) {
-        update(gameRef, { gameState: "end", winner: myId });
-        setDecideText("");
-        return;
-      } else {
-        const newGuess = {
-          word: decideText,
-          result: resultWord(nextPlayer.guessWord!, decideText),
-          playerId: myId,
-        };
-
-        update(gameRef, {
-          guessStack: [...(game.guessStack ?? []), newGuess],
-          currentOrder: nextPlayer.uid,
-        });
-      }
-
-      update(gameRef, { currentOrder: nextPlayer.uid });
-
-      setDecideText("");
+      guess();
     }
+  };
+
+  const guess = () => {
+    if (!game) return;
+
+    if (!myId || !game.players) return;
+
+    // 두 명 플레이어
+    const players = Object.values(game.players);
+    const nextPlayer = players.find((p) => p.uid !== game.currentOrder);
+
+    if (!nextPlayer) return; // 안전망
+
+    const gameRef = ref(rtdb, `games/${id}`);
+
+    if (nextPlayer.guessWord === decideText) {
+      update(gameRef, { gameState: "end", winner: myId });
+      setDecideText("");
+      return;
+    } else {
+      const newGuess = {
+        word: decideText,
+        result: resultWord(nextPlayer.guessWord!, decideText),
+        playerId: myId,
+      };
+
+      update(gameRef, {
+        guessStack: [...(game.guessStack ?? []), newGuess],
+        currentOrder: nextPlayer.uid,
+      });
+    }
+
+    update(gameRef, { currentOrder: nextPlayer.uid });
+
+    setDecideText("");
   };
 
   const [showMine, setShowMine] = useState(true);
@@ -575,7 +583,7 @@ export default function GameRoom() {
                     onKeyDown={handleSubmitDecideChange}
                     maxLength={9}
                   />
-                  <SubmitButton>완료</SubmitButton>
+                  <SubmitButton onClick={submitDecide}>완료</SubmitButton>
                 </InputContainer>
               </>
             ) : (
@@ -641,7 +649,7 @@ export default function GameRoom() {
                       onChange={handleTextChange}
                       onKeyDown={handleGuessChange}
                     />
-                    <SubmitButton>확인</SubmitButton>
+                    <SubmitButton onClick={guess}>확인</SubmitButton>
                   </InputContainer>
                 </>
               ) : (
