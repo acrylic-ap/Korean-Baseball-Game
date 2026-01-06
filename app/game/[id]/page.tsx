@@ -176,7 +176,7 @@ const SolvingContainer = styled(GameContainer)`
 const SolvingListContainer = styled.div`
   background-color: rgba(30, 30, 30);
 
-  border-radius: 12px 0 0 12px;
+  border-radius: 12px;
 
   height: 100%;
   width: 25%;
@@ -211,6 +211,12 @@ const ListButton = styled.button`
   &:active {
     background-color: rgba(255, 255, 255, 0.2);
   }
+`;
+
+const InputPreview = styled.p`
+  font-size: 12pt;
+
+  margin-top: 10px;
 `;
 
 const SolvingTitle = styled(Subtitle)`
@@ -251,7 +257,7 @@ const LongResultCharContainer = styled.div`
 
 const ResultChar = styled.span<{ type?: "O" | "@" | "other" }>`
   color: ${({ type }) =>
-    type === "O" ? "#3b82f6" : type === "@" ? "#facc15" : "white"};
+    type === "O" ? "#3b82f6" : type === "@" ? "#facc15" : "gray"};
 
   font-size: 14px;
 `;
@@ -264,6 +270,12 @@ const SolvingFieldContainer = styled.div`
   align-items: center;
   justify-content: center;
   flex-direction: column;
+`;
+
+const TurnTime = styled.p`
+  position: absolute;
+  right: 10px;
+  top: 10px;
 `;
 
 // end
@@ -318,6 +330,8 @@ const LobbyButton = styled.button`
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   }
 `;
+
+// Chat
 
 const ChatContainer = styled.div`
   width: 100%;
@@ -375,10 +389,17 @@ const ChatInputContainer = styled.div`
 `;
 
 const ChatInput = styled(Input)`
+  width: 80%;
+
   border-right: 1px solid white;
   border-radius: 5px;
-  text-align: left;
+
   padding-left: 5px;
+
+  font-size: 11pt;
+  text-align: left;
+
+  margin-right: 5px;
 `;
 
 const ChatButton = styled(SubmitButton)`
@@ -405,6 +426,7 @@ interface IGame {
     result: string;
     playerId: string;
   }[];
+  remainingTime: number;
 }
 
 export default function GameRoom() {
@@ -500,6 +522,36 @@ export default function GameRoom() {
           });
           break;
         case "solving":
+          setTimeout(() => {
+            const gameRef = ref(rtdb, `games/${id}`);
+
+            runTransaction(gameRef, (data) => {
+              if (data === null) return data;
+              console.log("들어옴");
+
+              const remainingTime = data.remainingTime - 1;
+
+              if (remainingTime > 0) {
+                return {
+                  ...data,
+                  remainingTime,
+                };
+              }
+
+              const players = Object.values(game!.players!);
+
+              const nextPlayer = players.find(
+                (p) => p.uid !== data.currentOrder
+              );
+
+              return {
+                ...data,
+                remainingTime: 15,
+                currentOrder: nextPlayer?.uid,
+              };
+            });
+          }, 1000);
+
           break;
         case "end":
           break;
@@ -770,6 +822,8 @@ export default function GameRoom() {
             </SolvingListContainer>
 
             <SolvingFieldContainer>
+              <TurnTime>제한 시간ㅣ{game.remainingTime}초</TurnTime>
+
               {myId && game.currentOrder === myId ? (
                 <>
                   <SolvingTitle>단어를 입력해 주세요!</SolvingTitle>
@@ -782,6 +836,7 @@ export default function GameRoom() {
                     />
                     <SubmitButton onClick={guess}>확인</SubmitButton>
                   </InputContainer>
+                  <InputPreview></InputPreview>
                 </>
               ) : (
                 <>
@@ -864,6 +919,7 @@ export default function GameRoom() {
                 value={chatText}
                 onChange={handleChatTextChange}
                 onKeyDown={handleSubmitChatChange}
+                placeholder="메시지 입력"
               />
               <ChatButton onClick={submitChat}>제출</ChatButton>
             </ChatInputContainer>
