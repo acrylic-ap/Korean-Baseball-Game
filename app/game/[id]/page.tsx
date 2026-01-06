@@ -792,6 +792,12 @@ export default function GameRoom() {
                 {showMine ? "내 기록" : "상대 기록"}
               </ListButton>
               <SolvingList>
+                {!showMine && (
+                  <ResultCharContainer>
+                    {myId && `정답: ${game?.players?.[myId]?.guessWord}`}
+                  </ResultCharContainer>
+                )}
+
                 {visibleGuessStack?.map((guess, idx) => (
                   <ResultCharContainer>
                     {guess.word.length < 10 ? (
