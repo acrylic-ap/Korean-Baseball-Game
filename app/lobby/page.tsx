@@ -52,27 +52,39 @@ const RoomContainer = styled.div`
   flex-wrap: wrap;
   align-content: flex-start;
 `;
+
 const Room = styled.div`
   position: relative;
+
   background-color: rgb(39, 39, 39);
+
   width: 47%;
   height: 10%;
+
   margin: 5px;
+
   border-radius: 10px;
+
   box-sizing: border-box;
+
   display: flex;
   align-items: center;
+
   cursor: pointer;
+
   transition: transform 0.1s;
+
   &:hover {
     background-color: rgb(50, 50, 50);
     transform: scale(1.02);
   }
 `;
+
 const MakeRoom = styled(Room)`
   justify-content: center;
-  border: 1px dashed #555;
+  border: 1px solid #555;
 `;
+
 const RoomNumber = styled.p`
   font-size: 19pt;
   margin: 15px;
@@ -173,7 +185,7 @@ export default function Lobby() {
         [userId]: { uid: userId, nickname, joinedAt: serverTimestamp() },
       },
     });
-    router.push(`/room/${newRoomRef.key}`);
+    router.replace(`/room/${newRoomRef.key}`);
   };
 
   const handleEnterRoom = async (roomId: string) => {
@@ -197,7 +209,7 @@ export default function Lobby() {
     if (result.committed) {
       // Disconnect 처리
       onDisconnect(userRef).remove();
-      router.push(`/room/${roomId}`);
+      router.replace(`/room/${roomId}`);
     } else {
       alert("방이 가득 찼습니다!");
     }

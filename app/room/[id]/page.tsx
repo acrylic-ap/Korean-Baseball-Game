@@ -145,6 +145,16 @@ export default function WaitingRoom() {
   const [myUid, setMyUid] = useState("");
   const isLeaving = useRef(false);
 
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = ""; // 크롬 등 대부분의 브라우저에서 기본 경고창을 띄움
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
   // --- 플레이어 준비 토글 ---
   const toggleReady = () => {
     if (!roomData?.players) return;
@@ -275,7 +285,7 @@ export default function WaitingRoom() {
         .finally(() => {
           // 3. 게임 페이지로 이동
           update(gameRef, { gameState: "deciding" });
-          router.push(`/game/${id}`);
+          router.replace(`/game/${id}`);
         });
     }
   }, [roomData?.gameState, id, router]);

@@ -3,6 +3,313 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { rtdb } from "@/lib/client";
 import { ref, get, onValue, update, runTransaction } from "firebase/database";
+import { styled } from "styled-components";
+
+const GamePage = styled.div`
+  background-color: #1a1a1a;
+
+  width: 100%;
+  height: 100%;
+`;
+
+const Header = styled.header`
+  width: 100%;
+  height: 10%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const Section = styled.section`
+  width: 100%;
+  height: 70%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+`;
+
+const Title = styled.p`
+  font-size: 22pt;
+  font-weight: 600;
+
+  margin-bottom: 30px;
+`;
+
+const GameContainer = styled.div`
+  position: relative;
+
+  background-color: #252525;
+
+  border-radius: 10px;
+
+  width: 80%;
+  height: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+`;
+
+const Subtitle = styled.p`
+  font-size: 17pt;
+  font-weight: 500;
+
+  margin-bottom: 12px;
+`;
+
+const DecideWaitTitle = styled(Subtitle)`
+  margin-bottom: 0;
+`;
+
+const InputContainer = styled.div`
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const Input = styled.input`
+  background-color: transparent;
+
+  width: 30%;
+  height: 30px;
+  box-sizing: border-box;
+
+  border: 1px solid white;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+  border-right: none;
+
+  font-size: 13pt;
+  color: white;
+  text-align: center;
+
+  outline: none;
+`;
+
+const SubmitButton = styled.button`
+  background-color: #3b82f6;
+
+  border: 1px solid white;
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+
+  height: 30px;
+  width: 45px;
+  box-sizing: border-box;
+
+  color: white;
+  font-size: 11pt;
+
+  /* 부드러운 트랜지션 */
+  transition: background-color 0.2s ease, transform 0.1s ease,
+    box-shadow 0.2s ease;
+
+  /* 호버 효과 */
+  &:hover {
+    background-color: #2563eb; /* 살짝 진한 파랑 */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+`;
+
+// deciding
+const PlayerDecidedContainer = styled.div`
+  position: absolute;
+  right: 10px;
+  top: 20px;
+
+  display: flex;
+  flex-direction: column;
+`;
+
+const DecidedContainer = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+
+  margin-bottom: 8px;
+`;
+
+const DecidedText = styled.p`
+  font-size: 15px;
+  color: white;
+
+  margin-right: 5px;
+`;
+
+const DecidedCircle = styled.div<{ $isDecide: boolean }>`
+  width: 12px;
+  height: 12px;
+
+  border: 1px solid white;
+  border-radius: 50%;
+
+  display: inline-block;
+  margin-right: 8px;
+
+  background-color: ${({ $isDecide }) => ($isDecide ? "blue" : "red")};
+  transition: background-color 0.3s ease;
+`;
+
+// solving
+const SolvingContainer = styled(GameContainer)`
+  flex-direction: row;
+`;
+
+const SolvingListContainer = styled.div`
+  background-color: rgba(30, 30, 30);
+
+  border-radius: 12px 0 0 12px;
+
+  height: 100%;
+  width: 25%;
+
+  display: flex;
+  flex-direction: column;
+`;
+
+const ListButton = styled.button`
+  background-color: transparent;
+
+  margin-top: 10px;
+  margin-left: 10px;
+
+  width: 65px;
+  height: 25px;
+
+  border: 1px solid white;
+  border-radius: 5px;
+
+  margin-bottom: 5px;
+
+  color: white;
+  font-weight: 300;
+
+  transition: background-color 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  &:active {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+`;
+
+const SolvingTitle = styled(Subtitle)`
+  white-space: pre-wrap;
+`;
+
+const SolvingList = styled.div`
+  width: 100%;
+  height: 90%;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow-x: auto;
+  overflow-y: auto;
+
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+const ResultCharContainer = styled.div`
+  margin: 5px 10px;
+
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+`;
+
+const LongResultCharContainer = styled.div`
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+`;
+
+const ResultChar = styled.span<{ type?: "O" | "@" | "other" }>`
+  color: ${({ type }) =>
+    type === "O" ? "#3b82f6" : type === "@" ? "#facc15" : "white"};
+
+  font-size: 14px;
+`;
+
+const SolvingFieldContainer = styled.div`
+  width: 75%;
+  height: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+`;
+
+// end
+
+const EndContainer = styled(GameContainer)`
+  flex-direction: row;
+`;
+
+const EndFieldContainer = styled.div`
+  width: 75%;
+  height: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+`;
+
+const EndTitle = styled(Subtitle)`
+  font-size: 20pt;
+`;
+
+const Answer = styled.p`
+  font-size: 14pt;
+
+  margin-bottom: 10px;
+`;
+
+const LobbyButton = styled.button`
+  background-color: #3b82f6;
+
+  border: 1px solid white;
+  border-radius: 5px;
+
+  height: 30px;
+  box-sizing: border-box;
+
+  color: white;
+  font-size: 11pt;
+
+  /* 부드러운 트랜지션 */
+  transition: background-color 0.2s ease, transform 0.1s ease,
+    box-shadow 0.2s ease;
+
+  /* 호버 효과 */
+  &:hover {
+    background-color: #2563eb; /* 살짝 진한 파랑 */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+`;
 
 interface IPlayer {
   uid: string;
@@ -33,6 +340,15 @@ export default function GameRoom() {
 
   const [myId, setMyId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -242,75 +558,156 @@ export default function GameRoom() {
   );
 
   return (
-    <div>
-      <h1>{game.title}</h1>
-      {game.gameState === "deciding" ? (
-        <div>
-          {!hasDecided && (
-            <>
-              <p>단어를 정해 주세요!</p>
-              <input
-                type="text"
-                value={decideText}
-                onChange={handleTextChange}
-                onKeyDown={handleSubmitDecideChange}
-              />
-            </>
-          )}
-          {players.map((p) => (
-            <li key={p.uid}>
-              {p.nickname}
-              {p.uid === myId && "(나)"}: {p.isDecide ? "완료" : "미완료"}
-            </li>
-          ))}
-        </div>
-      ) : game.gameState === "solving" ? (
-        <div>
-          <div>
-            <button onClick={() => setShowMine(true)} disabled={showMine}>
-              내 기록
-            </button>
-            <button onClick={() => setShowMine(false)} disabled={!showMine}>
-              상대 기록
-            </button>
-          </div>
-          <div>
-            {visibleGuessStack?.map((guess, idx) => (
-              <div key={idx}>
-                <p>{guess.word}</p>
-                <p>{guess.result}</p>
-              </div>
-            ))}
-          </div>
+    <GamePage>
+      <Header></Header>
+      <Section>
+        <Title>{game.title}</Title>
+        {game.gameState === "deciding" ? (
+          <GameContainer>
+            {!hasDecided ? (
+              <>
+                <Subtitle>상대방이 맞힐 단어를 정해 주세요!</Subtitle>
+                <InputContainer>
+                  <Input
+                    type="text"
+                    value={decideText}
+                    onChange={handleTextChange}
+                    onKeyDown={handleSubmitDecideChange}
+                    maxLength={9}
+                  />
+                  <SubmitButton>완료</SubmitButton>
+                </InputContainer>
+              </>
+            ) : (
+              <DecideWaitTitle>상대방을 기다리고 있어요...</DecideWaitTitle>
+            )}
 
-          {myId && game.currentOrder === myId ? (
-            <>
-              <p>단어를 입력해 주세요!</p>
-              <input
-                type="text"
-                value={decideText}
-                onChange={handleTextChange}
-                onKeyDown={handleGuessChange}
-              />
-            </>
-          ) : (
-            <>
-              <p>잠시만 기다려 주세요, 상대가 단어를 고르고 있어요.</p>
-            </>
-          )}
-        </div>
-      ) : (
-        game.gameState === "end" && (
-          <div>
-            {!game.winner
-              ? "왓"
-              : game.winner !== myId
-              ? `너 짐 수고
-정답: ${correctWord}`
-              : "올 이겼네"}
-          </div>
-        )
-      )}
-    </div>
+            <PlayerDecidedContainer>
+              {players.map((p) => (
+                <DecidedContainer>
+                  <DecidedText>
+                    {p.nickname}
+                    {p.uid === myId && "(나)"}
+                  </DecidedText>
+                  <DecidedCircle $isDecide={p.isDecide ? true : false} />
+                </DecidedContainer>
+              ))}
+            </PlayerDecidedContainer>
+          </GameContainer>
+        ) : game.gameState === "solving" ? (
+          <SolvingContainer>
+            <SolvingListContainer>
+              <ListButton onClick={() => setShowMine(!showMine)}>
+                {showMine ? "내 기록" : "상대 기록"}
+              </ListButton>
+              <SolvingList>
+                {visibleGuessStack?.map((guess, idx) => (
+                  <ResultCharContainer>
+                    {guess.word.length < 10 ? (
+                      guess.word
+                        .split("")
+                        .map((char, index) => (
+                          <ResultChar
+                            type={
+                              guess.result[index] === "O"
+                                ? "O"
+                                : guess.result[index] === "@"
+                                ? "@"
+                                : "other"
+                            }
+                          >
+                            {char}
+                          </ResultChar>
+                        ))
+                    ) : (
+                      <LongResultCharContainer>
+                        <ResultChar>{guess.word}</ResultChar>
+                        <ResultChar>{guess.result}</ResultChar>
+                      </LongResultCharContainer>
+                    )}
+                  </ResultCharContainer>
+                ))}
+              </SolvingList>
+            </SolvingListContainer>
+
+            <SolvingFieldContainer>
+              {myId && game.currentOrder === myId ? (
+                <>
+                  <SolvingTitle>단어를 입력해 주세요!</SolvingTitle>
+                  <InputContainer>
+                    <Input
+                      type="text"
+                      value={decideText}
+                      onChange={handleTextChange}
+                      onKeyDown={handleGuessChange}
+                    />
+                    <SubmitButton>확인</SubmitButton>
+                  </InputContainer>
+                </>
+              ) : (
+                <>
+                  <SolvingTitle>
+                    {`잠시만 기다려 주세요, 
+상대가 단어를 고르고 있어요.`}
+                  </SolvingTitle>
+                </>
+              )}
+            </SolvingFieldContainer>
+          </SolvingContainer>
+        ) : (
+          game.gameState === "end" && (
+            <EndContainer>
+              <SolvingListContainer>
+                <ListButton onClick={() => setShowMine(!showMine)}>
+                  {showMine ? "내 기록" : "상대 기록"}
+                </ListButton>
+                <SolvingList>
+                  {visibleGuessStack?.map((guess, idx) => (
+                    <ResultCharContainer>
+                      {guess.word.length < 10 ? (
+                        guess.word
+                          .split("")
+                          .map((char, index) => (
+                            <ResultChar
+                              type={
+                                guess.result[index] === "O"
+                                  ? "O"
+                                  : guess.result[index] === "@"
+                                  ? "@"
+                                  : "other"
+                              }
+                            >
+                              {char}
+                            </ResultChar>
+                          ))
+                      ) : (
+                        <LongResultCharContainer>
+                          <ResultChar>{guess.word}</ResultChar>
+                          <ResultChar>{guess.result}</ResultChar>
+                        </LongResultCharContainer>
+                      )}
+                    </ResultCharContainer>
+                  ))}
+                </SolvingList>
+              </SolvingListContainer>
+
+              <EndFieldContainer>
+                <EndTitle>
+                  {!game.winner
+                    ? "왓"
+                    : game.winner !== myId
+                    ? "패배하셨습니다."
+                    : "당신이 승리하셨습니다!"}
+                </EndTitle>
+                <Answer>정답: {correctWord}</Answer>
+                <LobbyButton onClick={() => router.replace("/lobby")}>
+                  돌아가기
+                </LobbyButton>
+              </EndFieldContainer>
+            </EndContainer>
+          )
+        )}
+      </Section>
+    </GamePage>
   );
 }
