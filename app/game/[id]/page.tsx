@@ -1,8 +1,16 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { rtdb } from "@/lib/client";
-import { ref, get, onValue, update, runTransaction } from "firebase/database";
+import {
+  ref,
+  get,
+  onValue,
+  update,
+  runTransaction,
+  push,
+  onChildAdded,
+} from "firebase/database";
 import { styled } from "styled-components";
 
 const GamePage = styled.div`
@@ -311,6 +319,73 @@ const LobbyButton = styled.button`
   }
 `;
 
+const ChatContainer = styled.div`
+  width: 100%;
+
+  margin-top: 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+`;
+
+const Chat = styled.div`
+  background-color: #252525;
+
+  width: 80%;
+  height: 130px;
+
+  border-radius: 10px;
+
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+`;
+
+const ChatText = styled.div`
+  width: 100%;
+  height: 75%;
+
+  overflow-y: auto;
+
+  display: flex;
+  flex-direction: column;
+
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+const ChatContent = styled.p`
+  margin-top: 5px;
+  margin-left: 10px;
+`;
+
+const ChatInputContainer = styled.div`
+  width: 100%;
+  height: 25%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const ChatInput = styled(Input)`
+  border-right: 1px solid white;
+  border-radius: 5px;
+  text-align: left;
+  padding-left: 5px;
+`;
+
+const ChatButton = styled(SubmitButton)`
+  border-right: 1px solid white;
+  border-radius: 5px;
+`;
+
 interface IPlayer {
   uid: string;
   nickname: string;
@@ -436,11 +511,13 @@ export default function GameRoom() {
 
   const [decideText, setDecideText] = useState("");
 
-  const handleTextChange = (e: any) => {
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDecideText(e.target.value);
   };
 
-  const handleSubmitDecideChange = (e: any) => {
+  const handleSubmitDecideChange = (
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
     if (e.key === "Enter") {
       submitDecide();
     }
@@ -510,7 +587,7 @@ export default function GameRoom() {
     return result.join("");
   };
 
-  const handleGuessChange = (e: any) => {
+  const handleGuessChange = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       guess();
     }
@@ -550,6 +627,60 @@ export default function GameRoom() {
 
     setDecideText("");
   };
+
+  interface ChatMessage {
+    message: string;
+    userId: string;
+    nickname: string;
+  }
+
+  const [chatText, setChatText] = useState("");
+  const [chatList, setChatList] = useState<ChatMessage[]>([]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const chatsRef = ref(rtdb, `chats/${id}`);
+    const unsubscribe = onChildAdded(chatsRef, (snapshot) => {
+      const data = snapshot.val();
+      setChatList((prev) => [...prev, data]);
+    });
+
+    return () => unsubscribe();
+  }, [id]);
+
+  const handleChatTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setChatText(e.target.value);
+  };
+
+  const handleSubmitChatChange = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key == "Enter") {
+      submitChat();
+    }
+  };
+
+  const submitChat = async () => {
+    if (!id) return;
+
+    const chatsRef = ref(rtdb, `chats/${id}`); // RTDB 경로
+    const nicknameRef = ref(rtdb, `games/${id}/players/${myId}/nickname`);
+
+    const nickname = await (await get(nicknameRef)).val();
+
+    push(chatsRef, {
+      message: chatText,
+      userId: myId,
+      nickname: nickname,
+    });
+
+    setChatText("");
+  };
+
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatList]);
 
   const [showMine, setShowMine] = useState(true);
 
@@ -715,6 +846,29 @@ export default function GameRoom() {
             </EndContainer>
           )
         )}
+        <ChatContainer>
+          <Chat>
+            <ChatText>
+              {chatList.map((chat) => (
+                <ChatContent>
+                  {`${chat.nickname}${chat.userId === myId ? "(나)" : ""}: ${
+                    chat.message
+                  }`}
+                </ChatContent>
+              ))}
+              <div ref={chatEndRef} />
+            </ChatText>
+            <ChatInputContainer>
+              <ChatInput
+                type="text"
+                value={chatText}
+                onChange={handleChatTextChange}
+                onKeyDown={handleSubmitChatChange}
+              />
+              <ChatButton onClick={submitChat}>제출</ChatButton>
+            </ChatInputContainer>
+          </Chat>
+        </ChatContainer>
       </Section>
     </GamePage>
   );
