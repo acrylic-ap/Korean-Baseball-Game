@@ -230,7 +230,7 @@ const SolvingList = styled.div`
   display: flex;
   flex-direction: column;
 
-  overflow-x: auto;
+  overflow-x: none;
   overflow-y: auto;
 
   -ms-overflow-style: none;
@@ -254,6 +254,8 @@ const LongResultCharContainer = styled.div`
   align-items: flex-start;
   flex-direction: column;
 `;
+
+const ShortResultCharContainer = styled.div``;
 
 const ResultChar = styled.span<{ type?: "O" | "@" | "other" }>`
   color: ${({ type }) =>
@@ -472,6 +474,8 @@ export default function GameRoom() {
     });
   }, [id, router]);
 
+  const timerRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (!id) return;
 
@@ -522,7 +526,12 @@ export default function GameRoom() {
           });
           break;
         case "solving":
-          setTimeout(() => {
+          if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+          }
+
+          timerRef.current = window.setTimeout(() => {
             const gameRef = ref(rtdb, `games/${id}`);
 
             runTransaction(gameRef, (data) => {
@@ -672,6 +681,7 @@ export default function GameRoom() {
       update(gameRef, {
         guessStack: [...(game.guessStack ?? []), newGuess],
         currentOrder: nextPlayer.uid,
+        remainingTime: 15,
       });
     }
 
@@ -801,9 +811,8 @@ export default function GameRoom() {
                 {visibleGuessStack?.map((guess, idx) => (
                   <ResultCharContainer>
                     {guess.word.length < 10 ? (
-                      guess.word
-                        .split("")
-                        .map((char, index) => (
+                      <ShortResultCharContainer>
+                        {guess.word.split("").map((char, index) => (
                           <ResultChar
                             type={
                               guess.result[index] === "O"
@@ -815,7 +824,8 @@ export default function GameRoom() {
                           >
                             {char}
                           </ResultChar>
-                        ))
+                        ))}
+                      </ShortResultCharContainer>
                     ) : (
                       <LongResultCharContainer>
                         <ResultChar>{guess.word}</ResultChar>
@@ -865,9 +875,8 @@ export default function GameRoom() {
                   {visibleGuessStack?.map((guess, idx) => (
                     <ResultCharContainer>
                       {guess.word.length < 10 ? (
-                        guess.word
-                          .split("")
-                          .map((char, index) => (
+                        <ShortResultCharContainer>
+                          {guess.word.split("").map((char, index) => (
                             <ResultChar
                               type={
                                 guess.result[index] === "O"
@@ -879,7 +888,8 @@ export default function GameRoom() {
                             >
                               {char}
                             </ResultChar>
-                          ))
+                          ))}
+                        </ShortResultCharContainer>
                       ) : (
                         <LongResultCharContainer>
                           <ResultChar>{guess.word}</ResultChar>
