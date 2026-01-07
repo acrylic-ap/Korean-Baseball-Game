@@ -556,7 +556,7 @@ export default function GameRoom() {
 
               return {
                 ...data,
-                remainingTime: 15,
+                remainingTime: 30,
                 currentOrder: nextPlayer?.uid,
               };
             });
@@ -698,7 +698,7 @@ export default function GameRoom() {
       update(gameRef, {
         guessStack: [...(game.guessStack ?? []), newGuess],
         currentOrder: nextPlayer.uid,
-        remainingTime: 15,
+        remainingTime: 30,
       });
     }
 
