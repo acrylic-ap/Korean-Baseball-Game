@@ -159,10 +159,14 @@ const DecidedContainer = styled.div`
 `;
 
 const DecidedText = styled.p`
-  font-size: 12px;
+  font-size: 9pt;
   color: white;
 
   margin-right: 5px;
+
+  @media screen and (min-width: 768px) {
+    font-size: 12pt;
+  }
 `;
 
 const DecidedCircle = styled.div<{ $isDecide: boolean }>`
