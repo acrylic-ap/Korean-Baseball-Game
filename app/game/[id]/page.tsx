@@ -258,9 +258,15 @@ const LongResultCharContainer = styled.div`
 
 const ShortResultCharContainer = styled.div``;
 
-const ResultChar = styled.span<{ type?: "O" | "@" | "other" }>`
+const ResultChar = styled.span<{ type?: "O" | "@" | "$" | "other" }>`
   color: ${({ type }) =>
-    type === "O" ? "#3b82f6" : type === "@" ? "#facc15" : "gray"};
+    type === "O"
+      ? "#3b82f6"
+      : type === "@"
+      ? "#facc15"
+      : type === "$"
+      ? "#4afa15"
+      : "gray"};
 
   font-size: 14px;
 `;
@@ -655,6 +661,36 @@ export default function GameRoom() {
     update(playerRef, { guessWord: decideText, isDecide: true });
   };
 
+  // 한 글자 초성 뽑는 함수
+  const getInitial = (ch: string) => {
+    const INITIALS = [
+      "ㄱ",
+      "ㄲ",
+      "ㄴ",
+      "ㄷ",
+      "ㄸ",
+      "ㄹ",
+      "ㅁ",
+      "ㅂ",
+      "ㅃ",
+      "ㅅ",
+      "ㅆ",
+      "ㅇ",
+      "ㅈ",
+      "ㅉ",
+      "ㅊ",
+      "ㅋ",
+      "ㅌ",
+      "ㅍ",
+      "ㅎ",
+    ];
+
+    const code = ch.charCodeAt(0);
+    if (code < 0xac00 || code > 0xd7a3) return ch; // 한글 아니면 그대로
+    const idx = Math.floor((code - 0xac00) / 588);
+    return INITIALS[idx];
+  };
+
   const resultWord = (targetWord: string, compareWord: string) => {
     if (compareWord.length > 9) {
       const tCount: Record<string, number> = {};
@@ -703,6 +739,34 @@ export default function GameRoom() {
         remain[ch]--;
       } else {
         result[i] = "X";
+      }
+    }
+
+    const myGuessStack = game?.guessStack?.filter(
+      (guess) => guess.playerId === myId
+    );
+
+    // 자음 일치 여부
+    if (myGuessStack && myGuessStack.length > 9) {
+      for (let i = 0; i < max; i++) {
+        if (result[i] !== "X") continue;
+
+        const char = c[i];
+        const targetChar = t[i];
+
+        if (!char || !targetChar) {
+          result[i] = "X";
+          continue;
+        }
+
+        const charInitial = getInitial(char);
+        const targetCharInitial = getInitial(targetChar);
+
+        if (charInitial === targetCharInitial) {
+          result[i] = "$";
+        } else {
+          result[i] = "X";
+        }
       }
     }
 
@@ -911,6 +975,8 @@ export default function GameRoom() {
                                 ? "O"
                                 : guess.result[index] === "@"
                                 ? "@"
+                                : guess.result[index] === "$"
+                                ? "$"
                                 : "other"
                             }
                           >
