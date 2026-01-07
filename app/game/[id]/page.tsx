@@ -435,6 +435,24 @@ const ChatButton = styled(SubmitButton)`
   border-radius: 5px;
 `;
 
+const StyledChar = styled.span<{ $status: string }>`
+  font-size: 20px;
+
+  color: ${({ $status }) => {
+    switch ($status) {
+      case "O":
+        return "#3b82f6";
+      case "X":
+        return "gray";
+      case "@":
+        return "#facc15";
+      case "?":
+      default:
+        return "white";
+    }
+  }};
+`;
+
 interface IPlayer {
   uid: string;
   nickname: string;
@@ -562,7 +580,6 @@ export default function GameRoom() {
 
             runTransaction(gameRef, (data) => {
               if (data === null) return data;
-              console.log("들어옴");
 
               const remainingTime = data.remainingTime - 1;
 
@@ -800,6 +817,33 @@ export default function GameRoom() {
     showMine ? guess.playerId === myId : guess.playerId !== myId
   );
 
+  const myGuessStack = game.guessStack?.filter(
+    (guess) => guess.playerId === myId
+  );
+
+  const syllableMap = new Map<string, string>();
+
+  myGuessStack?.forEach((item) => {
+    item.word.split("").forEach((char, idx) => {
+      const opponentWord = players.find((p) => p.uid !== myId)?.guessWord;
+      if (!opponentWord) return;
+
+      const resultChar = item.result[idx];
+      const status = resultChar === "O" ? "O" : resultChar === "X" ? "X" : "@";
+
+      const key = `${char}-${idx}`;
+      const prev = syllableMap.get(key);
+
+      if (!opponentWord.includes(char)) {
+        syllableMap.set(char, "X");
+        return;
+      } else if (opponentWord[idx] !== char) {
+        syllableMap.set(key, "@");
+        return;
+      } else if (!prev) syllableMap.set(key, status);
+    });
+  });
+
   return (
     <GamePage>
       <Header></Header>
@@ -882,7 +926,7 @@ export default function GameRoom() {
             </SolvingListContainer>
 
             <SolvingFieldContainer>
-              <TurnTime $remainingTime={game.remainingTime}></TurnTime>
+              <TurnTime $remainingTime={game.remainingTime} />
 
               {myId && game.currentOrder === myId ? (
                 <>
@@ -896,7 +940,17 @@ export default function GameRoom() {
                     />
                     <SubmitButton onClick={guess}>확인</SubmitButton>
                   </InputContainer>
-                  <InputPreview></InputPreview>
+                  <InputPreview>
+                    {decideText.split("").map((char, idx) => {
+                      const key = `${char}-${idx}`;
+                      const status =
+                        syllableMap.get(char) === "X"
+                          ? "X"
+                          : syllableMap.get(key) ?? "?";
+
+                      return <StyledChar $status={status}>{char}</StyledChar>;
+                    })}
+                  </InputPreview>
                 </>
               ) : (
                 <>
