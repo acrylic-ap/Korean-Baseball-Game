@@ -290,10 +290,14 @@ const TurnTime = styled.div<{ $remainingTime: number }>`
     const progress = 1 - $remainingTime / TOTAL_TIME;
     const angle = progress * 360;
 
+    let activeColor = "#696969"; // 기본 (여유)
+    if ($remainingTime <= 10) activeColor = "#f59e0b"; // 주황
+    if ($remainingTime <= 5) activeColor = "#ef4444"; // 빨강
+
     return `
       conic-gradient(
         #1E1E1E 0deg ${angle}deg,
-        #696969 ${angle}deg 360deg
+        ${activeColor} ${angle}deg 360deg
       )
     `;
   }};
