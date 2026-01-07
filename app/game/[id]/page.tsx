@@ -175,6 +175,8 @@ const SolvingContainer = styled(GameContainer)`
 `;
 
 const SolvingListContainer = styled.div`
+  position: relative;
+
   background-color: rgba(30, 30, 30);
 
   border-radius: 12px;
@@ -186,19 +188,23 @@ const SolvingListContainer = styled.div`
   flex-direction: column;
 `;
 
-const ListButton = styled.button`
-  background-color: transparent;
-
+const ButtonContainer = styled.div`
   margin-top: 10px;
   margin-left: 10px;
+  margin-bottom: 5px;
+
+  display: flex;
+  align-items: center;
+`;
+
+const ListButton = styled.button`
+  background-color: transparent;
 
   width: 65px;
   height: 25px;
 
   border: 1px solid white;
   border-radius: 5px;
-
-  margin-bottom: 5px;
 
   color: white;
   font-weight: 300;
@@ -213,6 +219,88 @@ const ListButton = styled.button`
     background-color: rgba(255, 255, 255, 0.2);
   }
 `;
+
+const GuideButton = styled.svg`
+  width: 30px;
+  height: 30px;
+
+  border-radius: 50%;
+
+  margin-left: 5px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const Guide = styled.div`
+  position: absolute;
+  top: 0;
+  right: 0;
+
+  background-color: #151515a1;
+
+  padding: 10px;
+  border-radius: 5px;
+
+  font-size: 11pt;
+
+  white-space: pre-wrap;
+`;
+
+const GuideLine = styled.div`
+  display: flex;
+  align-items: center;
+`;
+
+// Circle
+
+const Circle = styled.div`
+  width: 10px;
+  height: 10px;
+
+  margin-right: 5px;
+
+  border-radius: 50%;
+`;
+
+const WhiteCircle = styled(Circle)`
+  background-color: white;
+`;
+
+const RedCircle = styled(Circle)`
+  background-color: #ff3a3a;
+`;
+
+const GreenCircle = styled(Circle)`
+  background-color: #76ff44;
+`;
+
+const BlueCircle = styled(Circle)`
+  background-color: #2e66ff;
+`;
+
+const YellowCircle = styled(Circle)`
+  background-color: #fdff9b;
+`;
+
+const MagentaCircle = styled(Circle)`
+  background-color: #ff3d8b;
+`;
+
+const CyanCircle = styled(Circle)`
+  background-color: #00cfeb;
+`;
+
+const GrayCircle = styled(Circle)`
+  background-color: #a9aeb0;
+`;
+
+const DeepGrayCircle = styled(Circle)`
+  background-color: rgb(70, 70, 70);
+`;
+
+// End Circle
 
 const InputPreview = styled.p`
   font-size: 12pt;
@@ -990,6 +1078,8 @@ export default function GameRoom() {
     router.replace("/lobby");
   };
 
+  const [isGuiding, setIsGuiding] = useState(false);
+
   if (!game) return <div>로딩중...</div>;
 
   const me = myId ? game.players?.[myId] : null;
@@ -1071,9 +1161,82 @@ export default function GameRoom() {
         ) : game.gameState === "solving" ? (
           <SolvingContainer>
             <SolvingListContainer>
-              <ListButton onClick={() => setShowMine(!showMine)}>
-                {showMine ? "내 기록" : "상대 기록"}
-              </ListButton>
+              <ButtonContainer>
+                <ListButton onClick={() => setShowMine(!showMine)}>
+                  {showMine ? "내 기록" : "상대 기록"}
+                </ListButton>
+                <GuideButton
+                  width="100"
+                  height="100"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  onClick={() => setIsGuiding(!isGuiding)}
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="1"
+                  />
+                  <path
+                    d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+                    stroke="currentColor"
+                    stroke-width="1"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <line
+                    x1="12"
+                    y1="17"
+                    x2="12.01"
+                    y2="17"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
+                </GuideButton>
+                {isGuiding && (
+                  <Guide onClick={() => setIsGuiding(!isGuiding)}>
+                    색 가이드
+                    <GuideLine>
+                      <WhiteCircle />
+                      스트라이크
+                    </GuideLine>
+                    <GuideLine>
+                      <GrayCircle />볼
+                    </GuideLine>
+                    <GuideLine>
+                      <DeepGrayCircle />
+                      아웃
+                    </GuideLine>
+                    <GuideLine>
+                      <RedCircle />
+                      초성
+                    </GuideLine>
+                    <GuideLine>
+                      <GreenCircle />
+                      중성
+                    </GuideLine>
+                    <GuideLine>
+                      <BlueCircle />
+                      종성
+                    </GuideLine>
+                    <GuideLine>
+                      <YellowCircle />
+                      초·중성
+                    </GuideLine>
+                    <GuideLine>
+                      <MagentaCircle />
+                      초·종성
+                    </GuideLine>
+                    <GuideLine>
+                      <CyanCircle />
+                      중·종성
+                    </GuideLine>
+                  </Guide>
+                )}
+              </ButtonContainer>
               <SolvingList>
                 {!showMine && (
                   <ResultCharContainer>
