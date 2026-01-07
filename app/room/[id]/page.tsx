@@ -284,7 +284,7 @@ export default function WaitingRoom() {
         })
         .finally(() => {
           // 3. 게임 페이지로 이동
-          update(gameRef, { gameState: "deciding", remainingTime: 15 });
+          update(gameRef, { gameState: "deciding", remainingTime: 30 });
           router.replace(`/game/${id}`);
         });
     }

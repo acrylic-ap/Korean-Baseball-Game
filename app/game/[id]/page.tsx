@@ -284,6 +284,8 @@ const TurnTime = styled.div<{ $remainingTime: number }>`
 
   width: 30px;
   height: 30px;
+
+  border: 1px solid #9c9c9c;
   border-radius: 50%;
 
   background: ${({ $remainingTime }) => {
