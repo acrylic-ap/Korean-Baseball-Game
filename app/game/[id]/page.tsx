@@ -258,7 +258,7 @@ const LongResultCharContainer = styled.div`
 
 const ShortResultCharContainer = styled.div``;
 
-const ResultChar = styled.span<{ type?: "O" | "@" | "$" | "other" }>`
+const ResultChar = styled.span<{ type?: "O" | "@" | "$" | "&" | "other" }>`
   color: ${({ type }) =>
     type === "O"
       ? "#3b82f6"
@@ -266,6 +266,8 @@ const ResultChar = styled.span<{ type?: "O" | "@" | "$" | "other" }>`
       ? "#facc15"
       : type === "$"
       ? "#4afa15"
+      : type === "&"
+      ? "#8d13d3"
       : "gray"};
 
   font-size: 14px;
@@ -691,6 +693,44 @@ export default function GameRoom() {
     return INITIALS[idx];
   };
 
+  const getFinal = (ch: string): string => {
+    const FINAL_CONSONANTS = [
+      "",
+      "ㄱ",
+      "ㄲ",
+      "ㄳ",
+      "ㄴ",
+      "ㄵ",
+      "ㄶ",
+      "ㄷ",
+      "ㄹ",
+      "ㄺ",
+      "ㄻ",
+      "ㄼ",
+      "ㄽ",
+      "ㄾ",
+      "ㄿ",
+      "ㅀ",
+      "ㅁ",
+      "ㅂ",
+      "ㅄ",
+      "ㅅ",
+      "ㅆ",
+      "ㅇ",
+      "ㅈ",
+      "ㅊ",
+      "ㅋ",
+      "ㅌ",
+      "ㅍ",
+      "ㅎ",
+    ];
+
+    const code = ch.charCodeAt(0);
+    if (code < 0xac00 || code > 0xd7a3) return "";
+    const finalIndex = (code - 0xac00) % 28;
+    return FINAL_CONSONANTS[finalIndex];
+  };
+
   const resultWord = (targetWord: string, compareWord: string) => {
     if (compareWord.length > 9) {
       const tCount: Record<string, number> = {};
@@ -746,7 +786,27 @@ export default function GameRoom() {
       (guess) => guess.playerId === myId
     );
 
-    // 자음 일치 여부
+    for (let i = 0; i < max; i++) {
+      if (result[i] !== "X") continue;
+
+      const char = c[i];
+      const targetChar = t[i];
+
+      if (!char || !targetChar) {
+        result[i] = "X";
+        continue;
+      }
+
+      const charInitial = getInitial(char);
+      const targetCharInitial = getInitial(targetChar);
+
+      if (charInitial === targetCharInitial) {
+        result[i] = "$";
+      } else {
+        result[i] = "X";
+      }
+    }
+
     if (myGuessStack && myGuessStack.length > 9) {
       for (let i = 0; i < max; i++) {
         if (result[i] !== "X") continue;
@@ -759,11 +819,11 @@ export default function GameRoom() {
           continue;
         }
 
-        const charInitial = getInitial(char);
-        const targetCharInitial = getInitial(targetChar);
+        const charFinal = getFinal(char);
+        const targetFinal = getFinal(targetChar);
 
-        if (charInitial === targetCharInitial) {
-          result[i] = "$";
+        if (charFinal === targetFinal) {
+          result[i] = "&";
         } else {
           result[i] = "X";
         }
@@ -976,6 +1036,8 @@ export default function GameRoom() {
                                 : guess.result[index] === "@"
                                 ? "@"
                                 : guess.result[index] === "$"
+                                ? "$"
+                                : guess.result[index] === "&"
                                 ? "$"
                                 : "other"
                             }
