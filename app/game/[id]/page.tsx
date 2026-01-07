@@ -385,6 +385,8 @@ const ChatInputContainer = styled.div`
   width: 100%;
   height: 25%;
 
+  margin-bottom: 5px;
+
   display: flex;
   align-items: center;
   justify-content: center;
@@ -585,7 +587,15 @@ export default function GameRoom() {
   };
 
   const submitDecide = () => {
-    if (!decideText || decideText.length > 9) return;
+    if (!decideText) return;
+
+    // 한글이나 영어인지 판단
+    const hasInvalidChar = /[^가-힣a-zA-Z]/.test(decideText);
+
+    if (hasInvalidChar) {
+      alert("한글이나 영어만 가능합니다. 띄어쓰기는 불가능합니다.");
+      return;
+    }
 
     const playerRef = ref(rtdb, `games/${id}/players/${myId}`);
 
