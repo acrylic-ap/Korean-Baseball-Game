@@ -14,7 +14,7 @@ import {
 import { styled } from "styled-components";
 
 const GamePage = styled.div`
-  background-color: #1a1a1a;
+  background: linear-gradient(135deg, #242424 0%, #0b0b0b 100%);
 
   width: 100%;
   height: 100%;
@@ -50,6 +50,8 @@ const GameContainer = styled.div`
   position: relative;
 
   background-color: #252525;
+
+  box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.3);
 
   border-radius: 10px;
 
@@ -273,10 +275,28 @@ const SolvingFieldContainer = styled.div`
   flex-direction: column;
 `;
 
-const TurnTime = styled.p`
+const TOTAL_TIME = 30;
+
+const TurnTime = styled.div<{ $remainingTime: number }>`
   position: absolute;
-  right: 10px;
-  top: 10px;
+  right: 15px;
+  top: 15px;
+
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+
+  background: ${({ $remainingTime }) => {
+    const progress = 1 - $remainingTime / TOTAL_TIME;
+    const angle = progress * 360;
+
+    return `
+      conic-gradient(
+        #1E1E1E 0deg ${angle}deg,
+        #696969 ${angle}deg 360deg
+      )
+    `;
+  }};
 `;
 
 // end
@@ -347,6 +367,7 @@ const ChatContainer = styled.div`
 
 const Chat = styled.div`
   background-color: #252525;
+  box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.3);
 
   width: 80%;
   height: 130px;
@@ -384,7 +405,7 @@ const ChatInputContainer = styled.div`
   width: 100%;
   height: 25%;
 
-  margin-bottom: 5px;
+  margin-bottom: 10px;
 
   display: flex;
   align-items: center;
@@ -857,7 +878,7 @@ export default function GameRoom() {
             </SolvingListContainer>
 
             <SolvingFieldContainer>
-              <TurnTime>제한 시간ㅣ{game.remainingTime}초</TurnTime>
+              <TurnTime $remainingTime={game.remainingTime}></TurnTime>
 
               {myId && game.currentOrder === myId ? (
                 <>
