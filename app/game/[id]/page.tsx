@@ -31,7 +31,7 @@ const Header = styled.header`
 
 const Section = styled.section`
   width: 100%;
-  height: 70%;
+  height: 80%;
 
   display: flex;
   align-items: center;
@@ -55,7 +55,7 @@ const GameContainer = styled.div`
 
   border-radius: 10px;
 
-  width: 80%;
+  width: 90%;
   height: 50%;
 
   display: flex;
@@ -65,10 +65,16 @@ const GameContainer = styled.div`
 `;
 
 const Subtitle = styled.p`
-  font-size: 17pt;
+  width: 80%;
+
+  font-size: 13pt;
   font-weight: 500;
 
+  text-align: center;
+
   margin-bottom: 12px;
+
+  white-space: pre-wrap;
 `;
 
 const DecideWaitTitle = styled(Subtitle)``;
@@ -93,7 +99,7 @@ const Input = styled.input<{ $enabled?: boolean }>`
   border-bottom-left-radius: 5px;
   border-right: none;
 
-  font-size: 13pt;
+  font-size: 10pt;
   color: white;
   text-align: center;
 
@@ -112,7 +118,7 @@ const SubmitButton = styled.button<{ $enabled?: boolean }>`
   box-sizing: border-box;
 
   color: white;
-  font-size: 11pt;
+  font-size: 10pt;
 
   /* 부드러운 트랜지션 */
   transition: background-color 0.2s ease, transform 0.1s ease,
@@ -149,7 +155,7 @@ const DecidedContainer = styled.div`
 `;
 
 const DecidedText = styled.p`
-  font-size: 15px;
+  font-size: 12px;
   color: white;
 
   margin-right: 5px;
@@ -182,30 +188,32 @@ const SolvingListContainer = styled.div`
   border-radius: 12px;
 
   height: 100%;
-  width: 25%;
+  width: 35%;
 
   display: flex;
   flex-direction: column;
 `;
 
 const ButtonContainer = styled.div`
-  margin-top: 10px;
-  margin-left: 10px;
+  margin-top: 5px;
+  margin-left: 5px;
   margin-bottom: 5px;
 
   display: flex;
   align-items: center;
+  justify-content: center;
 `;
 
 const ListButton = styled.button`
   background-color: transparent;
 
-  width: 65px;
+  width: 50%;
   height: 25px;
 
   border: 1px solid white;
   border-radius: 5px;
 
+  font-size: 9pt;
   color: white;
   font-weight: 300;
 
@@ -221,8 +229,8 @@ const ListButton = styled.button`
 `;
 
 const GuideButton = styled.svg`
-  width: 30px;
-  height: 30px;
+  width: 23px;
+  height: 23px;
 
   border-radius: 50%;
 
@@ -236,14 +244,16 @@ const GuideButton = styled.svg`
 const Guide = styled.div`
   position: absolute;
   top: 0;
-  right: 0;
+  left: 0;
 
   background-color: #151515a1;
+
+  width: 80px;
 
   padding: 10px;
   border-radius: 5px;
 
-  font-size: 11pt;
+  font-size: 10pt;
 
   white-space: pre-wrap;
 `;
@@ -303,8 +313,6 @@ const DeepGrayCircle = styled(Circle)`
 // End Circle
 
 const InputPreview = styled.p`
-  font-size: 12pt;
-
   margin-top: 10px;
 `;
 
@@ -332,6 +340,8 @@ const SolvingList = styled.div`
 
 const ResultCharContainer = styled.div`
   margin: 5px 10px;
+
+  font-size: 10pt;
 
   display: flex;
   align-items: flex-start;
@@ -368,7 +378,7 @@ const ResultChar = styled.span<{
       ? "#00cfeb"
       : "rgb(70, 70, 70)"};
 
-  font-size: 14px;
+  font-size: 11pt;
 `;
 
 const SolvingFieldContainer = styled.div`
@@ -428,11 +438,11 @@ const EndFieldContainer = styled.div`
 `;
 
 const EndTitle = styled(Subtitle)`
-  font-size: 20pt;
+  font-size: 14pt;
 `;
 
 const Answer = styled.p`
-  font-size: 14pt;
+  font-size: 12pt;
 
   margin-bottom: 10px;
 `;
@@ -481,7 +491,7 @@ const Chat = styled.div`
   background-color: #252525;
   box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.3);
 
-  width: 80%;
+  width: 90%;
   height: 130px;
 
   border-radius: 10px;
@@ -509,7 +519,9 @@ const ChatText = styled.div`
 `;
 
 const ChatContent = styled.p`
-  margin-top: 5px;
+  font-size: 10pt;
+
+  margin-top: 10px;
   margin-left: 10px;
 `;
 
@@ -525,26 +537,28 @@ const ChatInputContainer = styled.div`
 `;
 
 const ChatInput = styled(Input)`
-  width: 80%;
+  width: 70%;
 
   border-right: 1px solid white;
   border-radius: 5px;
 
   padding-left: 5px;
 
-  font-size: 11pt;
+  font-size: 10pt;
   text-align: left;
 
   margin-right: 5px;
 `;
 
 const ChatButton = styled(SubmitButton)`
-  border-right: 1px solid white;
+  background-color: #3b82f6;
+
+  border: none;
   border-radius: 5px;
 `;
 
 const StyledChar = styled.span<{ $status: string }>`
-  font-size: 20px;
+  font-size: 12pt;
 
   font-weight: ${({ $status }) => {
     $status === "?" ? "100" : "bold";
@@ -1165,7 +1179,7 @@ export default function GameRoom() {
             <SolvingListContainer>
               <ButtonContainer>
                 <ListButton onClick={() => setShowMine(!showMine)}>
-                  {showMine ? "내 기록" : "상대 기록"}
+                  {showMine ? "나" : "상대"}
                 </ListButton>
                 <GuideButton
                   width="100"
@@ -1242,7 +1256,7 @@ export default function GameRoom() {
               <SolvingList>
                 {!showMine && (
                   <ResultCharContainer>
-                    {myId && `정답: ${game?.players?.[myId]?.guessWord}`}
+                    {myId && `✔ ${game?.players?.[myId]?.guessWord}`}
                   </ResultCharContainer>
                 )}
 
@@ -1251,10 +1265,7 @@ export default function GameRoom() {
                     {guess.word.length < 10 ? (
                       <ShortResultCharContainer>
                         {guess.word.split("").map((char, index) => (
-                          <ResultChar
-                            type={guess.result[index]}
-                            onClick={() => alert(guess.result[index])}
-                          >
+                          <ResultChar type={guess.result[index]}>
                             {char}
                           </ResultChar>
                         ))}
@@ -1312,7 +1323,7 @@ export default function GameRoom() {
             <EndContainer>
               <SolvingListContainer>
                 <ListButton onClick={() => setShowMine(!showMine)}>
-                  {showMine ? "내 기록" : "상대 기록"}
+                  {showMine ? "나" : "상대"}
                 </ListButton>
                 <SolvingList>
                   {visibleGuessStack?.map((guess, idx) => (
