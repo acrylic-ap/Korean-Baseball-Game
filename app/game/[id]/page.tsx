@@ -637,7 +637,7 @@ export default function GameRoom() {
     const playerRef = ref(rtdb, `games/${id}/players/${myId}`);
 
     if (hasDecided) {
-      update(playerRef, { guessWord: "", isDecide: false });
+      update(playerRef, { isDecide: false });
 
       return;
     }
@@ -719,6 +719,8 @@ export default function GameRoom() {
     if (!game) return;
 
     if (!myId || !game.players) return;
+
+    if (!decideText) return;
 
     // 두 명 플레이어
     const players = Object.values(game.players);
