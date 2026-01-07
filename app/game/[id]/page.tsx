@@ -75,6 +75,10 @@ const Subtitle = styled.p`
   margin-bottom: 12px;
 
   white-space: pre-wrap;
+
+  @media screen and (min-width: 768px) {
+    font-size: 18pt;
+  }
 `;
 
 const DecideWaitTitle = styled(Subtitle)``;
@@ -192,6 +196,10 @@ const SolvingListContainer = styled.div`
 
   display: flex;
   flex-direction: column;
+
+  @media screen and (min-width: 768px) {
+    width: 20%;
+  }
 `;
 
 const ButtonContainer = styled.div`
@@ -225,6 +233,10 @@ const ListButton = styled.button`
 
   &:active {
     background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  @media screen and (min-width: 768px) {
+    font-size: 11pt;
   }
 `;
 
@@ -346,6 +358,10 @@ const ResultCharContainer = styled.div`
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
+
+  @media screen and (min-width: 768px) {
+    font-size: 12pt;
+  }
 `;
 
 const LongResultCharContainer = styled.div`
@@ -379,6 +395,10 @@ const ResultChar = styled.span<{
       : "rgb(70, 70, 70)"};
 
   font-size: 11pt;
+
+  @media screen and (min-width: 768px) {
+    font-size: 13pt;
+  }
 `;
 
 const SolvingFieldContainer = styled.div`
@@ -389,6 +409,10 @@ const SolvingFieldContainer = styled.div`
   align-items: center;
   justify-content: center;
   flex-direction: column;
+
+  @media screen and (min-width: 768px) {
+    width: 80%;
+  }
 `;
 
 const TOTAL_TIME = 30;
@@ -435,16 +459,28 @@ const EndFieldContainer = styled.div`
   align-items: center;
   justify-content: center;
   flex-direction: column;
+
+  @media screen and (min-width: 768px) {
+    width: 80%;
+  }
 `;
 
 const EndTitle = styled(Subtitle)`
   font-size: 14pt;
+
+  @media screen and (min-width: 768px) {
+    font-size: 16pt;
+  }
 `;
 
 const Answer = styled.p`
   font-size: 12pt;
 
   margin-bottom: 10px;
+
+  @media screen and (min-width: 768px) {
+    font-size: 14pt;
+  }
 `;
 
 const LobbyButton = styled.button`
@@ -523,6 +559,10 @@ const ChatContent = styled.p`
 
   margin-top: 10px;
   margin-left: 10px;
+
+  @media screen and (min-width: 768px) {
+    font-size: 12pt;
+  }
 `;
 
 const ChatInputContainer = styled.div`
@@ -1135,6 +1175,113 @@ export default function GameRoom() {
     });
   });
 
+  const SolvingListComponent = () => {
+    return (
+      <SolvingListContainer>
+        <ButtonContainer>
+          <ListButton onClick={() => setShowMine(!showMine)}>
+            {showMine ? "나" : "상대"}
+          </ListButton>
+          <GuideButton
+            width="100"
+            height="100"
+            viewBox="0 0 24 24"
+            fill="none"
+            onClick={() => setIsGuiding(!isGuiding)}
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="1"
+            />
+            <path
+              d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+              stroke="currentColor"
+              stroke-width="1"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <line
+              x1="12"
+              y1="17"
+              x2="12.01"
+              y2="17"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+          </GuideButton>
+          {isGuiding && (
+            <Guide onClick={() => setIsGuiding(!isGuiding)}>
+              색 가이드
+              <GuideLine>
+                <WhiteCircle />
+                스트라이크
+              </GuideLine>
+              <GuideLine>
+                <GrayCircle />볼
+              </GuideLine>
+              <GuideLine>
+                <DeepGrayCircle />
+                아웃
+              </GuideLine>
+              <GuideLine>
+                <RedCircle />
+                초성
+              </GuideLine>
+              <GuideLine>
+                <GreenCircle />
+                중성
+              </GuideLine>
+              <GuideLine>
+                <BlueCircle />
+                종성
+              </GuideLine>
+              <GuideLine>
+                <YellowCircle />
+                초·중성
+              </GuideLine>
+              <GuideLine>
+                <MagentaCircle />
+                초·종성
+              </GuideLine>
+              <GuideLine>
+                <CyanCircle />
+                중·종성
+              </GuideLine>
+            </Guide>
+          )}
+        </ButtonContainer>
+        <SolvingList>
+          {!showMine && (
+            <ResultCharContainer>
+              {myId && `✔ ${game?.players?.[myId]?.guessWord}`}
+            </ResultCharContainer>
+          )}
+
+          {visibleGuessStack?.map((guess, idx) => (
+            <ResultCharContainer>
+              {guess.word.length < 10 ? (
+                <ShortResultCharContainer>
+                  {guess.word.split("").map((char, index) => (
+                    <ResultChar type={guess.result[index]}>{char}</ResultChar>
+                  ))}
+                </ShortResultCharContainer>
+              ) : (
+                <LongResultCharContainer>
+                  <ResultChar>{guess.word}</ResultChar>
+                  <ResultChar>{guess.result}</ResultChar>
+                </LongResultCharContainer>
+              )}
+            </ResultCharContainer>
+          ))}
+        </SolvingList>
+      </SolvingListContainer>
+    );
+  };
+
   return (
     <GamePage>
       <Header></Header>
@@ -1176,110 +1323,7 @@ export default function GameRoom() {
           </GameContainer>
         ) : game.gameState === "solving" ? (
           <SolvingContainer>
-            <SolvingListContainer>
-              <ButtonContainer>
-                <ListButton onClick={() => setShowMine(!showMine)}>
-                  {showMine ? "나" : "상대"}
-                </ListButton>
-                <GuideButton
-                  width="100"
-                  height="100"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  onClick={() => setIsGuiding(!isGuiding)}
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="1"
-                  />
-                  <path
-                    d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
-                    stroke="currentColor"
-                    stroke-width="1"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                  <line
-                    x1="12"
-                    y1="17"
-                    x2="12.01"
-                    y2="17"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                  />
-                </GuideButton>
-                {isGuiding && (
-                  <Guide onClick={() => setIsGuiding(!isGuiding)}>
-                    색 가이드
-                    <GuideLine>
-                      <WhiteCircle />
-                      스트라이크
-                    </GuideLine>
-                    <GuideLine>
-                      <GrayCircle />볼
-                    </GuideLine>
-                    <GuideLine>
-                      <DeepGrayCircle />
-                      아웃
-                    </GuideLine>
-                    <GuideLine>
-                      <RedCircle />
-                      초성
-                    </GuideLine>
-                    <GuideLine>
-                      <GreenCircle />
-                      중성
-                    </GuideLine>
-                    <GuideLine>
-                      <BlueCircle />
-                      종성
-                    </GuideLine>
-                    <GuideLine>
-                      <YellowCircle />
-                      초·중성
-                    </GuideLine>
-                    <GuideLine>
-                      <MagentaCircle />
-                      초·종성
-                    </GuideLine>
-                    <GuideLine>
-                      <CyanCircle />
-                      중·종성
-                    </GuideLine>
-                  </Guide>
-                )}
-              </ButtonContainer>
-              <SolvingList>
-                {!showMine && (
-                  <ResultCharContainer>
-                    {myId && `✔ ${game?.players?.[myId]?.guessWord}`}
-                  </ResultCharContainer>
-                )}
-
-                {visibleGuessStack?.map((guess, idx) => (
-                  <ResultCharContainer>
-                    {guess.word.length < 10 ? (
-                      <ShortResultCharContainer>
-                        {guess.word.split("").map((char, index) => (
-                          <ResultChar type={guess.result[index]}>
-                            {char}
-                          </ResultChar>
-                        ))}
-                      </ShortResultCharContainer>
-                    ) : (
-                      <LongResultCharContainer>
-                        <ResultChar>{guess.word}</ResultChar>
-                        <ResultChar>{guess.result}</ResultChar>
-                      </LongResultCharContainer>
-                    )}
-                  </ResultCharContainer>
-                ))}
-              </SolvingList>
-            </SolvingListContainer>
+            <SolvingListComponent />
 
             <SolvingFieldContainer>
               <TurnTime $remainingTime={game.remainingTime} />
@@ -1321,31 +1365,7 @@ export default function GameRoom() {
         ) : (
           game.gameState === "end" && (
             <EndContainer>
-              <SolvingListContainer>
-                <ListButton onClick={() => setShowMine(!showMine)}>
-                  {showMine ? "나" : "상대"}
-                </ListButton>
-                <SolvingList>
-                  {visibleGuessStack?.map((guess, idx) => (
-                    <ResultCharContainer>
-                      {guess.word.length < 10 ? (
-                        <ShortResultCharContainer>
-                          {guess.word.split("").map((char, index) => (
-                            <ResultChar type={guess.result[index]}>
-                              {char}
-                            </ResultChar>
-                          ))}
-                        </ShortResultCharContainer>
-                      ) : (
-                        <LongResultCharContainer>
-                          <ResultChar>{guess.word}</ResultChar>
-                          <ResultChar>{guess.result}</ResultChar>
-                        </LongResultCharContainer>
-                      )}
-                    </ResultCharContainer>
-                  ))}
-                </SolvingList>
-              </SolvingListContainer>
+              <SolvingListComponent />
 
               <EndFieldContainer>
                 <EndTitle>
