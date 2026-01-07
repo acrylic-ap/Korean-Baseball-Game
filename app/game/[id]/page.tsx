@@ -1042,6 +1042,8 @@ export default function GameRoom() {
   const submitChat = async () => {
     if (!id) return;
 
+    if (!chatText) return;
+
     const chatsRef = ref(rtdb, `chats/${id}`); // RTDB 경로
     const nicknameRef = ref(rtdb, `games/${id}/players/${myId}/nickname`);
 
