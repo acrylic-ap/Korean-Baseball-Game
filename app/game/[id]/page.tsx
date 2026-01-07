@@ -69,9 +69,7 @@ const Subtitle = styled.p`
   margin-bottom: 12px;
 `;
 
-const DecideWaitTitle = styled(Subtitle)`
-  margin-bottom: 0;
-`;
+const DecideWaitTitle = styled(Subtitle)``;
 
 const InputContainer = styled.div`
   width: 100%;
@@ -81,9 +79,9 @@ const InputContainer = styled.div`
   justify-content: center;
 `;
 
-const Input = styled.input`
-  background-color: transparent;
-
+const Input = styled.input<{ $enabled?: boolean }>`
+  background-color: ${({ $enabled }) =>
+    $enabled ? "rgba(70, 70, 70, 0.7)" : "transparent"};
   width: 30%;
   height: 30px;
   box-sizing: border-box;
@@ -100,8 +98,8 @@ const Input = styled.input`
   outline: none;
 `;
 
-const SubmitButton = styled.button`
-  background-color: #3b82f6;
+const SubmitButton = styled.button<{ $enabled?: boolean }>`
+  background-color: ${({ $enabled }) => ($enabled ? "#EF4444" : "#3b82f6")};
 
   border: 1px solid white;
   border-top-right-radius: 5px;
@@ -120,7 +118,8 @@ const SubmitButton = styled.button`
 
   /* 호버 효과 */
   &:hover {
-    background-color: #2563eb; /* 살짝 진한 파랑 */
+    background-color: ${({ $enabled }) =>
+      $enabled ? "#DC2626" : "#2563eb"}; /* 살짝 진한 파랑 */
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   }
 
@@ -586,7 +585,19 @@ export default function GameRoom() {
     }
   };
 
+  useEffect(() => {
+    setDecideText("");
+  }, [game?.gameState]);
+
   const submitDecide = () => {
+    const playerRef = ref(rtdb, `games/${id}/players/${myId}`);
+
+    if (hasDecided) {
+      update(playerRef, { guessWord: "", isDecide: false });
+
+      return;
+    }
+
     if (!decideText) return;
 
     // 한글이나 영어인지 판단
@@ -597,11 +608,7 @@ export default function GameRoom() {
       return;
     }
 
-    const playerRef = ref(rtdb, `games/${id}/players/${myId}`);
-
-    update(playerRef, { guessWord: decideText, isDecide: "true" });
-
-    setDecideText("");
+    update(playerRef, { guessWord: decideText, isDecide: true });
   };
 
   const resultWord = (targetWord: string, compareWord: string) => {
@@ -776,22 +783,24 @@ export default function GameRoom() {
         {game.gameState === "deciding" ? (
           <GameContainer>
             {!hasDecided ? (
-              <>
-                <Subtitle>상대방이 맞힐 단어를 정해 주세요!</Subtitle>
-                <InputContainer>
-                  <Input
-                    type="text"
-                    value={decideText}
-                    onChange={handleTextChange}
-                    onKeyDown={handleSubmitDecideChange}
-                    maxLength={9}
-                  />
-                  <SubmitButton onClick={submitDecide}>완료</SubmitButton>
-                </InputContainer>
-              </>
+              <Subtitle>상대방이 맞힐 단어를 정해 주세요!</Subtitle>
             ) : (
               <DecideWaitTitle>상대방을 기다리고 있어요...</DecideWaitTitle>
             )}
+            <InputContainer>
+              <Input
+                $enabled={hasDecided}
+                type="text"
+                value={decideText}
+                onChange={handleTextChange}
+                onKeyDown={handleSubmitDecideChange}
+                maxLength={9}
+                disabled={hasDecided}
+              />
+              <SubmitButton $enabled={hasDecided} onClick={submitDecide}>
+                {!hasDecided ? "완료" : "수정"}
+              </SubmitButton>
+            </InputContainer>
 
             <PlayerDecidedContainer>
               {players.map((p) => (
