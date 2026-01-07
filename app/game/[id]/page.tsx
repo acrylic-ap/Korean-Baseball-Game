@@ -377,24 +377,24 @@ const LongResultCharContainer = styled.div`
 const ShortResultCharContainer = styled.div``;
 
 const ResultChar = styled.span<{
-  type?: string;
+  $type?: string;
 }>`
-  color: ${({ type }) =>
-    type === "O"
+  color: ${({ $type }) =>
+    $type === "O"
       ? "white"
-      : type === "@"
+      : $type === "@"
       ? "#a9aeb0"
-      : type === "ㄱ"
+      : $type === "ㄱ"
       ? "#ff3a3a"
-      : type === "ㅏ"
+      : $type === "ㅏ"
       ? "#76ff44"
-      : type === "ㅁ"
+      : $type === "ㅁ"
       ? "#2e66ff"
-      : type === "가"
+      : $type === "가"
       ? "#fdff9b"
-      : type === "금"
+      : $type === "금"
       ? "#ff3d8b"
-      : type === "암"
+      : $type === "암"
       ? "#00cfeb"
       : "rgb(70, 70, 70)"};
 
@@ -604,9 +604,7 @@ const ChatButton = styled(SubmitButton)`
 const StyledChar = styled.span<{ $status: string }>`
   font-size: 12pt;
 
-  font-weight: ${({ $status }) => {
-    $status === "?" ? "100" : "bold";
-  }};
+  font-weight: ${({ $status }) => ($status === "?" ? "100" : "bold")};
 
   color: ${({ $status }) => {
     switch ($status) {
@@ -1270,7 +1268,7 @@ export default function GameRoom() {
               {guess.word.length < 10 ? (
                 <ShortResultCharContainer>
                   {guess.word.split("").map((char, index) => (
-                    <ResultChar type={guess.result[index]}>{char}</ResultChar>
+                    <ResultChar $type={guess.result[index]}>{char}</ResultChar>
                   ))}
                 </ShortResultCharContainer>
               ) : (
