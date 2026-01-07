@@ -258,17 +258,27 @@ const LongResultCharContainer = styled.div`
 
 const ShortResultCharContainer = styled.div``;
 
-const ResultChar = styled.span<{ type?: "O" | "@" | "$" | "&" | "other" }>`
+const ResultChar = styled.span<{
+  type?: string;
+}>`
   color: ${({ type }) =>
     type === "O"
-      ? "#3b82f6"
+      ? "white"
       : type === "@"
-      ? "#facc15"
-      : type === "$"
-      ? "#4afa15"
-      : type === "&"
-      ? "#8d13d3"
-      : "gray"};
+      ? "#a9aeb0"
+      : type === "ㄱ"
+      ? "#ff3a3a"
+      : type === "ㅏ"
+      ? "#76ff44"
+      : type === "ㅁ"
+      ? "#2e66ff"
+      : type === "가"
+      ? "#fdff9b"
+      : type === "금"
+      ? "#ff3d8b"
+      : type === "암"
+      ? "#00cfeb"
+      : "rgb(70, 70, 70)"};
 
   font-size: 14px;
 `;
@@ -448,15 +458,20 @@ const ChatButton = styled(SubmitButton)`
 const StyledChar = styled.span<{ $status: string }>`
   font-size: 20px;
 
+  font-weight: ${({ $status }) => {
+    $status === "?" ? "100" : "bold";
+  }};
+
   color: ${({ $status }) => {
     switch ($status) {
       case "O":
-        return "#3b82f6";
+        return "white";
       case "X":
         return "gray";
       case "@":
         return "#facc15";
       case "?":
+        return "white";
       default:
         return "white";
     }
@@ -693,6 +708,37 @@ export default function GameRoom() {
     return INITIALS[idx];
   };
 
+  const getMedial = (ch: string): string => {
+    const MEDIALS = [
+      "ㅏ",
+      "ㅐ",
+      "ㅑ",
+      "ㅒ",
+      "ㅓ",
+      "ㅔ",
+      "ㅕ",
+      "ㅖ",
+      "ㅗ",
+      "ㅘ",
+      "ㅙ",
+      "ㅚ",
+      "ㅛ",
+      "ㅜ",
+      "ㅝ",
+      "ㅞ",
+      "ㅟ",
+      "ㅠ",
+      "ㅡ",
+      "ㅢ",
+      "ㅣ",
+    ];
+
+    const code = ch.charCodeAt(0);
+    if (code < 0xac00 || code > 0xd7a3) return "";
+    const medialIndex = Math.floor(((code - 0xac00) % 588) / 28);
+    return MEDIALS[medialIndex];
+  };
+
   const getFinal = (ch: string): string => {
     const FINAL_CONSONANTS = [
       "",
@@ -782,54 +828,51 @@ export default function GameRoom() {
       }
     }
 
-    const myGuessStack = game?.guessStack?.filter(
-      (guess) => guess.playerId === myId
-    );
+    for (let i = 0; i < max; i++) {
+      console.log(`${result[i]}, ${c[i]}`);
+    }
 
     for (let i = 0; i < max; i++) {
-      if (result[i] !== "X") continue;
+      if (result[i] != "X") continue;
 
       const char = c[i];
       const targetChar = t[i];
 
-      if (!char || !targetChar) {
-        result[i] = "X";
-        continue;
-      }
+      if (!char || !targetChar) continue;
 
       const charInitial = getInitial(char);
       const targetCharInitial = getInitial(targetChar);
+      const charMedial = getMedial(char);
+      const targetMedial = getMedial(targetChar);
+      const charFinal = getFinal(char);
+      const targetFinal = getFinal(targetChar);
+
+      let res = "";
 
       if (charInitial === targetCharInitial) {
-        result[i] = "$";
-      } else {
-        result[i] = "X";
+        res += "ㄱ";
       }
-    }
 
-    if (myGuessStack && myGuessStack.length > 9) {
-      for (let i = 0; i < max; i++) {
-        if (result[i] !== "X") continue;
+      if (charMedial === targetMedial) {
+        res += "ㅏ";
+      }
 
-        const char = c[i];
-        const targetChar = t[i];
+      if (charFinal === targetFinal) {
+        res += "ㅁ";
+      }
 
-        if (!char || !targetChar) {
-          result[i] = "X";
-          continue;
+      if (res) {
+        if (res === "ㄱㅏ") {
+          res = "가";
+        } else if (res === "ㅏㅁ") {
+          res = "암";
+        } else if (res === "ㄱㅁ") {
+          res = "금";
         }
 
-        const charFinal = getFinal(char);
-        const targetFinal = getFinal(targetChar);
-
-        if (charFinal === targetFinal) {
-          result[i] = "&";
-        } else {
-          result[i] = "X";
-        }
+        result[i] = res;
       }
     }
-
     return result.join("");
   };
 
@@ -933,6 +976,20 @@ export default function GameRoom() {
 
   const [showMine, setShowMine] = useState(true);
 
+  const back = async () => {
+    const chatsRef = ref(rtdb, `chats/${id}`);
+    const nicknameRef = ref(rtdb, `games/${id}/players/${myId}/nickname`);
+
+    const nickname = await (await get(nicknameRef)).val();
+
+    push(chatsRef, {
+      nickname: "System",
+      message: `${nickname} 님이 게임에서 나가셨습니다.`,
+    });
+
+    router.replace("/lobby");
+  };
+
   if (!game) return <div>로딩중...</div>;
 
   const me = myId ? game.players?.[myId] : null;
@@ -1030,17 +1087,8 @@ export default function GameRoom() {
                       <ShortResultCharContainer>
                         {guess.word.split("").map((char, index) => (
                           <ResultChar
-                            type={
-                              guess.result[index] === "O"
-                                ? "O"
-                                : guess.result[index] === "@"
-                                ? "@"
-                                : guess.result[index] === "$"
-                                ? "$"
-                                : guess.result[index] === "&"
-                                ? "$"
-                                : "other"
-                            }
+                            type={guess.result[index]}
+                            onClick={() => alert(guess.result[index])}
                           >
                             {char}
                           </ResultChar>
@@ -1107,15 +1155,7 @@ export default function GameRoom() {
                       {guess.word.length < 10 ? (
                         <ShortResultCharContainer>
                           {guess.word.split("").map((char, index) => (
-                            <ResultChar
-                              type={
-                                guess.result[index] === "O"
-                                  ? "O"
-                                  : guess.result[index] === "@"
-                                  ? "@"
-                                  : "other"
-                              }
-                            >
+                            <ResultChar type={guess.result[index]}>
                               {char}
                             </ResultChar>
                           ))}
@@ -1140,9 +1180,7 @@ export default function GameRoom() {
                     : "당신이 승리하셨습니다!"}
                 </EndTitle>
                 <Answer>정답: {correctWord}</Answer>
-                <LobbyButton onClick={() => router.replace("/lobby")}>
-                  돌아가기
-                </LobbyButton>
+                <LobbyButton onClick={back}>돌아가기</LobbyButton>
               </EndFieldContainer>
             </EndContainer>
           )
