@@ -516,8 +516,9 @@ export default function GameRoom() {
         case "ordering":
           if (!game.players) return;
 
-          const randomIndex = Math.floor(Math.random() * 2);
-          const selectedPlayer = game.players[randomIndex];
+          const playersArray = Object.values(game.players);
+          const selectedPlayer =
+            playersArray[Math.floor(Math.random() * playersArray.length)];
 
           update(gameRef, {
             currentOrder: selectedPlayer.uid,
