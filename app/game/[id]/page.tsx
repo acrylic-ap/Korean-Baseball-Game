@@ -474,6 +474,7 @@ export default function GameRoom() {
       const snapshotData = snapshot.val();
 
       const { remainingTime, ...data } = snapshotData as IGame;
+
       if (!data || !game) return;
 
       setGame((prev) => {
@@ -559,7 +560,7 @@ export default function GameRoom() {
           break;
       }
     });
-  }, [id, router, isHost]);
+  }, [id, game, router, isHost]);
 
   const [decideText, setDecideText] = useState("");
 

@@ -219,8 +219,8 @@ export const SolvingListComponent = () => {
   const [showMine, setShowMine] = useState(true);
   const [isGuiding, setIsGuiding] = useState(false);
 
-  const [game, setGame] = useAtom(gameAtom);
-  const [myId, setMyId] = useAtom<string | null>(myIdAtom);
+  const [game] = useAtom(gameAtom);
+  const [myId] = useAtom<string | null>(myIdAtom);
 
   if (!game) return null;
 
