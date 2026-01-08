@@ -346,6 +346,8 @@ const SolvingList = styled.div`
   overflow-x: none;
   overflow-y: auto;
 
+  scroll-behavior: auto;
+
   -ms-overflow-style: none;
   scrollbar-width: none;
 
