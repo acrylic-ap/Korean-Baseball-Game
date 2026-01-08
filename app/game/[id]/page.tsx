@@ -12,6 +12,10 @@ import {
   onChildAdded,
 } from "firebase/database";
 import { styled } from "styled-components";
+import React from "react";
+import { useAtom } from "jotai";
+import { gameAtom, IGame, IPlayer, myIdAtom } from "@/app/atom/gameAtom";
+import { SolvingListComponent } from "./components/SolvingListComponent";
 
 const GamePage = styled.div`
   background: linear-gradient(135deg, #242424 0%, #0b0b0b 100%);
@@ -188,223 +192,12 @@ const SolvingContainer = styled(GameContainer)`
   flex-direction: row;
 `;
 
-const SolvingListContainer = styled.div`
-  position: relative;
-
-  background-color: rgba(30, 30, 30);
-
-  border-radius: 12px;
-
-  height: 100%;
-  width: 35%;
-
-  display: flex;
-  flex-direction: column;
-
-  @media screen and (min-width: 768px) {
-    width: 20%;
-  }
-`;
-
-const ButtonContainer = styled.div`
-  margin-top: 5px;
-  margin-left: 5px;
-  margin-bottom: 5px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const ListButton = styled.button`
-  background-color: transparent;
-
-  width: 50%;
-  height: 25px;
-
-  border: 1px solid white;
-  border-radius: 5px;
-
-  font-size: 9pt;
-  color: white;
-  font-weight: 300;
-
-  transition: background-color 0.2s ease, color 0.2s ease;
-
-  &:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-
-  &:active {
-    background-color: rgba(255, 255, 255, 0.2);
-  }
-
-  @media screen and (min-width: 768px) {
-    font-size: 11pt;
-  }
-`;
-
-const GuideButton = styled.svg`
-  width: 23px;
-  height: 23px;
-
-  border-radius: 50%;
-
-  margin-left: 5px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const Guide = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-
-  background-color: #151515a1;
-
-  width: 80px;
-
-  padding: 10px;
-  border-radius: 5px;
-
-  font-size: 10pt;
-
-  white-space: pre-wrap;
-`;
-
-const GuideLine = styled.div`
-  display: flex;
-  align-items: center;
-`;
-
-// Circle
-
-const Circle = styled.div`
-  width: 10px;
-  height: 10px;
-
-  margin-right: 5px;
-
-  border-radius: 50%;
-`;
-
-const WhiteCircle = styled(Circle)`
-  background-color: white;
-`;
-
-const RedCircle = styled(Circle)`
-  background-color: #ff3a3a;
-`;
-
-const GreenCircle = styled(Circle)`
-  background-color: #76ff44;
-`;
-
-const BlueCircle = styled(Circle)`
-  background-color: #2e66ff;
-`;
-
-const YellowCircle = styled(Circle)`
-  background-color: #fdff9b;
-`;
-
-const MagentaCircle = styled(Circle)`
-  background-color: #ff3d8b;
-`;
-
-const CyanCircle = styled(Circle)`
-  background-color: #00cfeb;
-`;
-
-const GrayCircle = styled(Circle)`
-  background-color: #a9aeb0;
-`;
-
-const DeepGrayCircle = styled(Circle)`
-  background-color: rgb(70, 70, 70);
-`;
-
-// End Circle
-
 const InputPreview = styled.p`
   margin-top: 10px;
 `;
 
 const SolvingTitle = styled(Subtitle)`
   white-space: pre-wrap;
-`;
-
-const SolvingList = styled.div`
-  width: 100%;
-  height: 90%;
-
-  display: flex;
-  flex-direction: column;
-
-  overflow-x: none;
-  overflow-y: auto;
-
-  scroll-behavior: auto;
-
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
-`;
-
-const ResultCharContainer = styled.div`
-  margin: 5px 10px;
-
-  font-size: 10pt;
-
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-
-  @media screen and (min-width: 768px) {
-    font-size: 12pt;
-  }
-`;
-
-const LongResultCharContainer = styled.div`
-  display: flex;
-  align-items: flex-start;
-  flex-direction: column;
-`;
-
-const ShortResultCharContainer = styled.div``;
-
-const ResultChar = styled.span<{
-  $type?: string;
-}>`
-  color: ${({ $type }) =>
-    $type === "O"
-      ? "white"
-      : $type === "@"
-      ? "#a9aeb0"
-      : $type === "ㄱ"
-      ? "#ff3a3a"
-      : $type === "ㅏ"
-      ? "#76ff44"
-      : $type === "ㅁ"
-      ? "#2e66ff"
-      : $type === "가"
-      ? "#fdff9b"
-      : $type === "금"
-      ? "#ff3d8b"
-      : $type === "암"
-      ? "#00cfeb"
-      : "rgb(70, 70, 70)"};
-
-  font-size: 11pt;
-
-  @media screen and (min-width: 768px) {
-    font-size: 13pt;
-  }
 `;
 
 const SolvingFieldContainer = styled.div`
@@ -624,35 +417,13 @@ const StyledChar = styled.span<{ $status: string }>`
   }};
 `;
 
-interface IPlayer {
-  uid: string;
-  nickname: string;
-  guessWord?: string;
-  isDecide?: boolean;
-}
-
-interface IGame {
-  title: string;
-  hostId: string;
-  players?: Record<string, IPlayer>; // optional로 처리
-  currentOrder?: string;
-  winner?: string;
-  gameState: "deciding" | "ordering" | "solving" | "end";
-  guessStack?: {
-    word: string;
-    result: string;
-    playerId: string;
-  }[];
-  remainingTime: number;
-}
-
 export default function GameRoom() {
   const { id } = useParams();
   const router = useRouter();
-  const [game, setGame] = useState<IGame | null>(null);
-  const [players, setPlayers] = useState<IPlayer[]>([]);
+  const [game, setGame] = useAtom(gameAtom);
+  const [remainingTime, setRemainingTime] = useState<number | null>(null);
 
-  const [myId, setMyId] = useState<string | null>(null);
+  const [myId, setMyId] = useAtom<string | null>(myIdAtom);
   const [isHost, setIsHost] = useState<boolean>(false);
 
   useEffect(() => {
@@ -670,9 +441,11 @@ export default function GameRoom() {
     const gameRef = ref(rtdb, `games/${id}`);
 
     get(gameRef).then((snapshot) => {
-      const data = snapshot.val() as IGame;
+      const snapshotData = snapshot.val();
 
-      if (!data) {
+      const { remainingTime, ...gameData } = snapshotData as IGame;
+
+      if (!gameData) {
         router.replace("/lobby"); // 방이 없으면 로비로
         return;
       }
@@ -681,11 +454,11 @@ export default function GameRoom() {
 
       setMyId(myUserId);
 
-      setGame(data); // 데이터 세팅
+      setGame(gameData); // 데이터 세팅
 
-      setPlayers(Object.values(data.players ?? []));
+      if (remainingTime) setRemainingTime(remainingTime);
 
-      setIsHost(myUserId === data.hostId);
+      setIsHost(myUserId === gameData.hostId);
     });
   }, [id, router]);
 
@@ -698,13 +471,23 @@ export default function GameRoom() {
     const playerRef = ref(rtdb, `games/${id}/players`);
 
     const unsubscribe = onValue(gameRef, (snapshot) => {
-      const data = snapshot.val() as IGame;
-      if (!data) return;
+      const snapshotData = snapshot.val();
 
-      setGame(data);
-      setPlayers(Object.values(data.players ?? []));
+      const { remainingTime, ...data } = snapshotData as IGame;
+      if (!data || !game) return;
+
+      setGame((prev) => {
+        if (JSON.stringify(prev) !== JSON.stringify(data)) {
+          return data;
+        }
+        return prev;
+      });
+
+      if (remainingTime) setRemainingTime(remainingTime);
 
       if (!isHost) return;
+
+      const remainingTimeRef = ref(rtdb, `games/${id}/remainingTime`);
 
       switch (data.gameState) {
         case "deciding":
@@ -722,7 +505,6 @@ export default function GameRoom() {
 
             // 모든 플레이어가 결정했으면 gameState를 ordering으로
             if (allDecided) {
-              const gameRef = ref(rtdb, `games/${id}`);
               update(gameRef, { gameState: "ordering" });
             }
 
@@ -731,10 +513,11 @@ export default function GameRoom() {
 
           break;
         case "ordering":
-          const randomIndex = Math.floor(Math.random() * players.length);
-          const selectedPlayer = players[randomIndex];
+          if (!game.players) return;
 
-          const gameRef = ref(rtdb, `games/${id}`);
+          const randomIndex = Math.floor(Math.random() * 2);
+          const selectedPlayer = game.players[randomIndex];
+
           update(gameRef, {
             currentOrder: selectedPlayer.uid,
             gameState: "solving",
@@ -747,31 +530,25 @@ export default function GameRoom() {
           }
 
           timerRef.current = window.setTimeout(() => {
-            const gameRef = ref(rtdb, `games/${id}`);
-
-            runTransaction(gameRef, (data) => {
+            runTransaction(remainingTimeRef, (data) => {
               if (data === null) return data;
 
-              const remainingTime = data.remainingTime - 1;
+              const remainingTime = data - 1;
 
               if (remainingTime > 0) {
-                return {
-                  ...data,
-                  remainingTime,
-                };
+                return remainingTime;
               }
 
-              const players = Object.values(game!.players!);
-
+              const players: IPlayer[] = Object.values(snapshotData.players!);
               const nextPlayer = players.find(
-                (p) => p.uid !== data.currentOrder
+                (p) => p.uid !== snapshotData.currentOrder
               );
 
-              return {
-                ...data,
-                remainingTime: 30,
+              update(gameRef, {
                 currentOrder: nextPlayer?.uid,
-              };
+              });
+
+              return 30;
             });
           }, 1000);
 
@@ -975,10 +752,6 @@ export default function GameRoom() {
     }
 
     for (let i = 0; i < max; i++) {
-      console.log(`${result[i]}, ${c[i]}`);
-    }
-
-    for (let i = 0; i < max; i++) {
       if (result[i] != "X") continue;
 
       const char = c[i];
@@ -1122,8 +895,6 @@ export default function GameRoom() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatList]);
 
-  const [showMine, setShowMine] = useState(true);
-
   const back = async () => {
     const chatsRef = ref(rtdb, `chats/${id}`);
     const nicknameRef = ref(rtdb, `games/${id}/players/${myId}/nickname`);
@@ -1138,8 +909,6 @@ export default function GameRoom() {
     router.replace("/lobby");
   };
 
-  const [isGuiding, setIsGuiding] = useState(false);
-
   if (!game) return <div>로딩중...</div>;
 
   const me = myId ? game.players?.[myId] : null;
@@ -1147,10 +916,6 @@ export default function GameRoom() {
   const correctWord =
     game.players &&
     Object.values(game.players).find((p) => p.uid !== myId)?.guessWord;
-
-  const visibleGuessStack = game.guessStack?.filter((guess) =>
-    showMine ? guess.playerId === myId : guess.playerId !== myId
-  );
 
   const myGuessStack = game.guessStack?.filter(
     (guess) => guess.playerId === myId
@@ -1160,7 +925,11 @@ export default function GameRoom() {
 
   myGuessStack?.forEach((item) => {
     item.word.split("").forEach((char, idx) => {
-      const opponentWord = players.find((p) => p.uid !== myId)?.guessWord;
+      if (!game.players) return;
+
+      const opponentWord = Object.values(game.players).find(
+        (p) => p.uid !== myId
+      )?.guessWord;
       if (!opponentWord) return;
 
       const resultChar = item.result[idx];
@@ -1178,113 +947,6 @@ export default function GameRoom() {
       } else if (!prev) syllableMap.set(key, status);
     });
   });
-
-  const SolvingListComponent = () => {
-    return (
-      <SolvingListContainer>
-        <ButtonContainer>
-          <ListButton onClick={() => setShowMine(!showMine)}>
-            {showMine ? "나" : "상대"}
-          </ListButton>
-          <GuideButton
-            width="100"
-            height="100"
-            viewBox="0 0 24 24"
-            fill="none"
-            onClick={() => setIsGuiding(!isGuiding)}
-          >
-            <circle
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="1"
-            />
-            <path
-              d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
-              stroke="currentColor"
-              stroke-width="1"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-            <line
-              x1="12"
-              y1="17"
-              x2="12.01"
-              y2="17"
-              stroke="currentColor"
-              stroke-width="1.5"
-              stroke-linecap="round"
-            />
-          </GuideButton>
-          {isGuiding && (
-            <Guide onClick={() => setIsGuiding(!isGuiding)}>
-              색 가이드
-              <GuideLine>
-                <WhiteCircle />
-                스트라이크
-              </GuideLine>
-              <GuideLine>
-                <GrayCircle />볼
-              </GuideLine>
-              <GuideLine>
-                <DeepGrayCircle />
-                아웃
-              </GuideLine>
-              <GuideLine>
-                <RedCircle />
-                초성
-              </GuideLine>
-              <GuideLine>
-                <GreenCircle />
-                중성
-              </GuideLine>
-              <GuideLine>
-                <BlueCircle />
-                종성
-              </GuideLine>
-              <GuideLine>
-                <YellowCircle />
-                초·중성
-              </GuideLine>
-              <GuideLine>
-                <MagentaCircle />
-                초·종성
-              </GuideLine>
-              <GuideLine>
-                <CyanCircle />
-                중·종성
-              </GuideLine>
-            </Guide>
-          )}
-        </ButtonContainer>
-        <SolvingList>
-          {!showMine && (
-            <ResultCharContainer>
-              {myId && `✔ ${game?.players?.[myId]?.guessWord}`}
-            </ResultCharContainer>
-          )}
-
-          {visibleGuessStack?.map((guess, idx) => (
-            <ResultCharContainer>
-              {guess.word.length < 10 ? (
-                <ShortResultCharContainer>
-                  {guess.word.split("").map((char, index) => (
-                    <ResultChar $type={guess.result[index]}>{char}</ResultChar>
-                  ))}
-                </ShortResultCharContainer>
-              ) : (
-                <LongResultCharContainer>
-                  <ResultChar>{guess.word}</ResultChar>
-                  <ResultChar>{guess.result}</ResultChar>
-                </LongResultCharContainer>
-              )}
-            </ResultCharContainer>
-          ))}
-        </SolvingList>
-      </SolvingListContainer>
-    );
-  };
 
   return (
     <GamePage>
@@ -1314,15 +976,16 @@ export default function GameRoom() {
             </InputContainer>
 
             <PlayerDecidedContainer>
-              {players.map((p) => (
-                <DecidedContainer>
-                  <DecidedText>
-                    {p.nickname}
-                    {p.uid === myId && "(나)"}
-                  </DecidedText>
-                  <DecidedCircle $isDecide={p.isDecide ? true : false} />
-                </DecidedContainer>
-              ))}
+              {game.players &&
+                Object.values(game.players).map((p) => (
+                  <DecidedContainer>
+                    <DecidedText>
+                      {p.nickname}
+                      {p.uid === myId && "(나)"}
+                    </DecidedText>
+                    <DecidedCircle $isDecide={p.isDecide ? true : false} />
+                  </DecidedContainer>
+                ))}
             </PlayerDecidedContainer>
           </GameContainer>
         ) : game.gameState === "solving" ? (
@@ -1330,7 +993,7 @@ export default function GameRoom() {
             <SolvingListComponent />
 
             <SolvingFieldContainer>
-              <TurnTime $remainingTime={game.remainingTime} />
+              {remainingTime && <TurnTime $remainingTime={remainingTime} />}
 
               {myId && game.currentOrder === myId ? (
                 <>
