@@ -34,3 +34,4 @@ export interface IGame {
 export const myIdAtom = atom<string | null>(null);
 export const gameAtom = atom<IGame | null>(null);
 export const myUserInfoAtom = atom<IUser | null>(null);
+export const remainingTimeAtom = atom<number | null>(null);

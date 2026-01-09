@@ -21,10 +21,12 @@ import {
   IUser,
   myIdAtom,
   myUserInfoAtom,
+  remainingTimeAtom,
 } from "@/app/atom/gameAtom";
 import { SolvingListComponent } from "./components/SolvingListComponent";
 import { userAgent } from "next/server";
 import { getFinal, getInitial, getMedial } from "./tools/getJamo";
+import { TimerComponent } from "./components/TimerComponent";
 
 const GamePage = styled.div`
   background: linear-gradient(135deg, #242424 0%, #0b0b0b 100%);
@@ -221,36 +223,6 @@ const SolvingFieldContainer = styled.div`
   @media screen and (min-width: 768px) {
     width: 80%;
   }
-`;
-
-const TOTAL_TIME = 30;
-
-const TurnTime = styled.div<{ $remainingTime: number }>`
-  position: absolute;
-  right: 15px;
-  top: 15px;
-
-  width: 30px;
-  height: 30px;
-
-  border: 1px solid #9c9c9c;
-  border-radius: 50%;
-
-  background: ${({ $remainingTime }) => {
-    const progress = 1 - $remainingTime / TOTAL_TIME;
-    const angle = progress * 360;
-
-    let activeColor = "#696969"; // 기본 (여유)
-    if ($remainingTime <= 10) activeColor = "#f59e0b"; // 주황
-    if ($remainingTime <= 5) activeColor = "#ef4444"; // 빨강
-
-    return `
-      conic-gradient(
-        #1E1E1E 0deg ${angle}deg,
-        ${activeColor} ${angle}deg 360deg
-      )
-    `;
-  }};
 `;
 
 // end
@@ -456,7 +428,7 @@ export default function GameRoom() {
   const router = useRouter();
   const [game, setGame] = useAtom(gameAtom);
   const [myUserInfo, setMyUserInfo] = useAtom(myUserInfoAtom);
-  const [remainingTime, setRemainingTime] = useState<number | null>(null);
+  const [, setRemainingTime] = useAtom(remainingTimeAtom);
 
   const [myId, setMyId] = useAtom<string | null>(myIdAtom);
   const [isHost, setIsHost] = useState<boolean>(false);
@@ -465,7 +437,7 @@ export default function GameRoom() {
 
   useEffect(() => {
     if (inputRef.current) inputRef.current.focus();
-  }, [game]);
+  }, [game?.currentOrder]);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -979,7 +951,7 @@ export default function GameRoom() {
             <SolvingListComponent />
 
             <SolvingFieldContainer>
-              {remainingTime && <TurnTime $remainingTime={remainingTime} />}
+              <TimerComponent />
 
               {myId && game.currentOrder === myId ? (
                 <>
