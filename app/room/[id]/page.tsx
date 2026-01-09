@@ -362,6 +362,9 @@ export default function WaitingRoom() {
       delete prev.players[targetUid];
       prev.current = Math.max(0, (prev.current || 1) - 1);
 
+      prev.banned = prev.banned || {};
+      prev.banned[targetUid] = true;
+
       // --- 호스트 승계는 필요 없음, 이미 호스트임 ---
       // --- 방 삭제 조건 ---
       if (

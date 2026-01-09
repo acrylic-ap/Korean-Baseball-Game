@@ -193,6 +193,11 @@ export default function Lobby() {
     const result = await runTransaction(roomRef, (currentData) => {
       if (!currentData) return currentData;
 
+      if (currentData.banned?.[userId]) {
+        alert("퇴장당한 방에는 입장하실 수 없습니다.");
+        return;
+      }
+
       // 이미 플레이어로 들어와 있으면 아무 것도 안 함
       if (currentData.players?.[userId]) {
         return currentData;
