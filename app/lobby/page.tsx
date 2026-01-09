@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import styled from "styled-components";
 import { isCreateOpenAtom } from "../atom/roomCreateModalAtom";
 import { RoomCreateModal } from "./components/RoomCreateModal";
+import { levenshtein } from "./tools/Levenshtein";
 
 /* --- Styles --- */
 const LobbyContainer = styled.div`
@@ -245,20 +246,33 @@ export default function Lobby() {
   const changeNickname = async () => {
     const nicknameRef = ref(rtdb, `users/${userId}/nickname`);
 
-    const nickname = prompt(`닉네임을 변경해 보세요.
-공백으로 제출 시 취소됩니다.`);
+    const input = prompt(
+      `닉네임을 변경해 보세요.\n공백으로 제출 시 취소됩니다.`
+    );
+    if (!input) return;
 
-    if (nickname === "Acrylic" || nickname === "아크릴릭") {
-      alert("그게 되겠나요 ^^");
+    const nickname = input.trim();
+    if (!nickname) return; // 공백만 입력 시 취소
+
+    if (!/^[가-힣a-zA-Z0-9]+$/.test(nickname)) {
+      alert("닉네임에는 영어, 한글, 숫자만 사용할 수 있습니다.");
       return;
     }
 
-    if (!nickname) return;
+    // 금지 단어 비교: 소문자 + 공백 제거
+    const forbidden = ["acrylic", "아크릴릭"];
+    const normalized = nickname.toLowerCase();
+    const isForbidden = forbidden.some(
+      (word) => levenshtein(word, normalized) <= 2
+    );
+
+    if (isForbidden) {
+      alert("운영자를 굉장히 존경하시나 보네요?");
+      return;
+    }
 
     localStorage.setItem("userNickname", nickname);
-
     await set(nicknameRef, nickname);
-
     setNickname(nickname);
   };
 
