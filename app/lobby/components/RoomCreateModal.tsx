@@ -146,7 +146,7 @@ export const RoomCreateModal = ({
         <Input
           placeholder="방 제목을 입력하세요"
           value={title}
-          maxLength={20}
+          maxLength={13}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleCreate()}
           ref={inputRef}

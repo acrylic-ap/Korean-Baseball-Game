@@ -90,26 +90,41 @@ const PlayerList = styled.div`
   margin-top: 20px;
   justify-content: center;
 `;
-const PlayerCard = styled.div<{ $isHost?: boolean }>`
+const PlayerCard = styled.div<{ $isHost?: boolean; $ready: boolean }>`
+  background: ${(props) =>
+    props.$isHost || props.$ready ? "#4a3b1d" : "#333"};
+
   padding: 15px 25px;
-  background: ${(props) => (props.$isHost ? "#4a3b1d" : "#333")};
-  border: 1px solid ${(props) => (props.$isHost ? "#ffd700" : "#555")};
+
+  border: 1px solid
+    ${(props) => (props.$isHost || props.$ready ? "#ffd700" : "#555")};
   border-radius: 10px;
+
   text-align: center;
   position: relative;
   min-width: 100px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   &::before {
     content: "${(props) => (props.$isHost ? "호스트" : "참가자")}";
     position: absolute;
     top: -10px;
     left: 50%;
     transform: translateX(-50%);
-    background: ${(props) => (props.$isHost ? "#ffd700" : "#555")};
-    color: ${(props) => (props.$isHost ? "#000" : "#fff")};
+    background: ${(props) =>
+      props.$isHost || props.$ready ? "#ffd700" : "#555"};
+    color: ${(props) => (props.$isHost || props.$ready ? "#000" : "#fff")};
     font-size: 0.7rem;
     padding: 2px 8px;
     border-radius: 5px;
   }
+`;
+const BanIcon = styled.svg`
+  margin-left: 5px;
+  cursor: pointer;
 `;
 const StartButton = styled.button`
   background-color: #ffd700;
@@ -153,6 +168,7 @@ interface IRoomData {
   gameState: "waiting" | "playing";
   players?: Record<string, IPlayerData>;
   spectators?: Record<string, IPlayerData>;
+  locked: boolean;
 }
 
 export default function WaitingRoom() {
@@ -180,8 +196,15 @@ export default function WaitingRoom() {
 
     return onValue(roomRef, (snapshot) => {
       const data = snapshot.val();
+
       setRoomData(data);
       setIsDataLoaded(true);
+
+      if (uid && !data.players?.[uid] && !data.spectators?.[uid]) {
+        isLeaving.current = true; // 중복 이동 방지
+        router.replace("/lobby");
+        return;
+      }
     });
   }, [id]);
 
@@ -218,7 +241,7 @@ export default function WaitingRoom() {
     const roomRef = ref(rtdb, `rooms/${id}`);
     const myPlayerRef = ref(rtdb, `rooms/${id}/players/${uid}`);
 
-    // --- 1. 플레이어 정보 등록 + onDisconnect ---
+    // --- 플레이어 정보 등록 + onDisconnect ---
     if (roomData?.current < 2) {
       set(myPlayerRef, {
         uid,
@@ -230,37 +253,6 @@ export default function WaitingRoom() {
       });
     }
 
-    // --- 2. 리스너 연결 ---
-    const unsubscribe = onValue(roomRef, (snapshot) => {
-      const data = snapshot.val() as IRoomData;
-
-      if (!data) {
-        if (!isLeaving.current) router.replace("/lobby");
-        return;
-      }
-
-      // --- 호스트 자동 승계 ---
-      if (data.players && data.hostId && !data.players[data.hostId]) {
-        const sorted = Object.values(data.players).sort(
-          (a, b) => (a.joinedAt || 0) - (b.joinedAt || 0)
-        );
-        if (sorted.length > 0) {
-          runTransaction(roomRef, (prev) => {
-            if (!prev) return prev;
-            const newHost = sorted[0].uid;
-            prev.hostId = newHost;
-            prev.hostNickname = sorted[0].nickname;
-
-            // 새 호스트 ready 초기화
-            prev.players = prev.players || {};
-            if (prev.players[newHost]) prev.players[newHost].ready = false;
-            return prev;
-          });
-        }
-      }
-    });
-
-    // --- 4. cleanup / 나가기 ---
     return () => {
       if (!isLeaving.current) {
         remove(myPlayerRef).catch(() => {});
@@ -357,6 +349,32 @@ export default function WaitingRoom() {
     router.replace("/lobby");
   };
 
+  const banPlayer = async (targetUid: string) => {
+    if (!roomData || !myUid) return;
+    if (myUid !== roomData.hostId) return; // 호스트만 가능
+
+    const roomRef = ref(rtdb, `rooms/${id}`);
+
+    await runTransaction(roomRef, (prev) => {
+      if (!prev || !prev.players || !prev.players[targetUid]) return prev;
+
+      // --- 대상 플레이어 제거 ---
+      delete prev.players[targetUid];
+      prev.current = Math.max(0, (prev.current || 1) - 1);
+
+      // --- 호스트 승계는 필요 없음, 이미 호스트임 ---
+      // --- 방 삭제 조건 ---
+      if (
+        (!prev.players || Object.keys(prev.players).length === 0) &&
+        (!prev.spectators || Object.keys(prev.spectators).length === 0)
+      ) {
+        return null;
+      }
+
+      return prev;
+    });
+  };
+
   return (
     <RoomContainer>
       <Header>
@@ -367,29 +385,52 @@ export default function WaitingRoom() {
             {roomData.current} / {roomData.max}
           </Capacity>
         </RoomInfo>
-        <Spectator>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M2 12C2 12 6 5 12 5C18 5 22 12 22 12C22 12 18 19 12 19C6 19 2 12 2 12Z"
-              stroke="#8B5CF6"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-            <circle cx="12" cy="12" r="3" stroke="#8B5CF6" stroke-width="2" />
-          </svg>
-          <SpectatorCount>
-            {roomData.spectators ? Object.keys(roomData.spectators).length : 0}
-          </SpectatorCount>
-        </Spectator>
+        {!roomData.locked && (
+          <Spectator>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M2 12C2 12 6 5 12 5C18 5 22 12 22 12C22 12 18 19 12 19C6 19 2 12 2 12Z"
+                stroke="#8B5CF6"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="12" cy="12" r="3" stroke="#8B5CF6" strokeWidth="2" />
+            </svg>
+
+            <SpectatorCount>
+              {roomData.spectators
+                ? Object.keys(roomData.spectators).length
+                : 0}
+            </SpectatorCount>
+          </Spectator>
+        )}
       </Header>
       <GameSection>
         <StatusBoard>
           <h2>대기실</h2>
           <PlayerList>
             {players.map((p) => (
-              <PlayerCard key={p.uid} $isHost={p.uid === roomData.hostId}>
-                {p.nickname} {p.uid === myUid && "(나)"} {p.ready ? "✅" : ""}
+              <PlayerCard
+                key={p.uid}
+                $isHost={p.uid === roomData.hostId}
+                $ready={p.ready}
+              >
+                {p.nickname} {p.uid === myUid && "(나)"}
+                {isHost && p.uid !== myUid && (
+                  <BanIcon
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    onClick={() => banPlayer(p.uid)}
+                  >
+                    <path
+                      d="M12 2C17.5 2 22 6.5 22 12C22 17.5 17.5 22 12 22C6.5 22 2 17.5 2 12C2 6.5 6.5 2 12 2ZM12 4C10.1 4 8.4 4.6 7.1 5.7L18.3 16.9C19.3 15.5 20 13.8 20 12C20 7.6 16.4 4 12 4ZM16.9 18.3L5.7 7.1C4.6 8.4 4 10.1 4 12C4 16.4 7.6 20 12 20C13.9 20 15.6 19.4 16.9 18.3Z"
+                      fill="red"
+                    />
+                  </BanIcon>
+                )}
               </PlayerCard>
             ))}
             {players.length < 2 && (
