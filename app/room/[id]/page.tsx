@@ -90,7 +90,7 @@ const PlayerList = styled.div`
   margin-top: 20px;
   justify-content: center;
 `;
-const PlayerCard = styled.div<{ $isHost?: boolean; $ready: boolean }>`
+const PlayerCard = styled.div<{ $isHost?: boolean; $ready?: boolean }>`
   background: ${(props) =>
     props.$isHost || props.$ready ? "#4a3b1d" : "#333"};
 
