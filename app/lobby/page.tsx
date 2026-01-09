@@ -8,6 +8,7 @@ import {
   set,
   serverTimestamp,
   onDisconnect,
+  update,
 } from "firebase/database";
 import { useAtom } from "jotai";
 import { useRouter } from "next/navigation";
@@ -236,13 +237,33 @@ export default function Lobby() {
     }
   };
 
+  const changeNickname = async () => {
+    const nicknameRef = ref(rtdb, `users/${userId}/nickname`);
+
+    const nickname = prompt(`닉네임을 변경해 보세요.
+공백으로 제출 시 취소됩니다.`);
+
+    if (nickname === "Acrylic" || nickname === "아크릴릭") {
+      alert("그게 되겠나요 ^^");
+      return;
+    }
+
+    if (!nickname) return;
+
+    localStorage.setItem("userNickname", nickname);
+
+    await set(nicknameRef, nickname);
+
+    setNickname(nickname);
+  };
+
   return (
     <LobbyContainer>
       <RoomCreateModal userId={userId} nickname={nickname} />
       <Header>
         <Title>한국어 야구 게임</Title>
         <UserNickname>
-          내 정보: <strong>{nickname}</strong>
+          내 정보: <strong onClick={changeNickname}>{nickname}</strong>
         </UserNickname>
       </Header>
       <Section>
