@@ -1,5 +1,11 @@
 import { atom } from "jotai"
 
+export interface IUser {
+  uid: string;
+  nickname: string;
+  lastActive: number;
+}
+
 export interface IPlayer {
   uid: string;
   nickname: string;
@@ -20,7 +26,11 @@ export interface IGame {
     playerId: string;
   }[];
   remainingTime?: number;
+  spectators?: {
+    userId: string;
+  }
 }
 
 export const myIdAtom = atom<string | null>(null);
 export const gameAtom = atom<IGame | null>(null);
+export const myUserInfoAtom = atom<IUser | null>(null);

@@ -1,7 +1,7 @@
 "use client";
-import { gameAtom, myIdAtom } from "@/app/atom/gameAtom";
+import { gameAtom, IUser, myIdAtom, myUserInfoAtom } from "@/app/atom/gameAtom";
 import { useAtom } from "jotai";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { styled } from "styled-components";
 
 // Circle
@@ -224,16 +224,65 @@ export const SolvingListComponent = () => {
 
   if (!game) return null;
 
-  const visibleGuessStack = game.guessStack?.filter((guess) =>
-    showMine ? guess.playerId === myId : guess.playerId !== myId
+  const isPlaying = game.players && myId && game.players[myId] ? true : false;
+
+  const [spectatingPlayerId, setSpectatingPlayerId] = useState<string | null>(
+    null
   );
+
+  useEffect(() => {
+    if (isPlaying) return;
+    if (!game.players) return;
+
+    const playerIds = Object.keys(game.players);
+    if (playerIds.length > 0 && !spectatingPlayerId) {
+      setSpectatingPlayerId(playerIds[0]);
+    }
+  }, [isPlaying, game.players, spectatingPlayerId]);
+
+  const visibleGuessStack = game.guessStack?.filter((guess) => {
+    if (isPlaying) {
+      return showMine ? guess.playerId === myId : guess.playerId !== myId;
+    } else {
+      if (!spectatingPlayerId) return false;
+      return guess.playerId === spectatingPlayerId;
+    }
+  });
+
+  const listButtonText = () => {
+    if (!game.players || !myId) return "";
+
+    if (!isPlaying) {
+      const player = game.players[spectatingPlayerId!];
+      return !spectatingPlayerId
+        ? ""
+        : typeof player === "string"
+        ? player
+        : player?.nickname || "";
+    } else return showMine ? "나" : "상대";
+  };
+
+  const togglePlayer = () => {
+    if (isPlaying) {
+      setShowMine(!showMine);
+      return;
+    }
+
+    if (!game.players || !spectatingPlayerId) return;
+
+    const playerIds = Object.keys(game.players);
+    if (playerIds.length < 2) return;
+
+    const currentIndex = playerIds.indexOf(spectatingPlayerId);
+    const nextIndex = (currentIndex + 1) % playerIds.length;
+
+    setSpectatingPlayerId(playerIds[nextIndex]);
+  };
 
   return (
     <SolvingListContainer>
       <ButtonContainer>
-        <ListButton onClick={() => setShowMine(!showMine)}>
-          {showMine ? "나" : "상대"}
-        </ListButton>
+        <ListButton onClick={togglePlayer}>{listButtonText()}</ListButton>
         <GuideButton
           width="100"
           height="100"
@@ -307,7 +356,7 @@ export const SolvingListComponent = () => {
         )}
       </ButtonContainer>
       <SolvingList>
-        {!showMine && (
+        {isPlaying && !showMine && (
           <ResultCharContainer>
             {myId && `✔ ${game?.players?.[myId]?.guessWord}`}
           </ResultCharContainer>

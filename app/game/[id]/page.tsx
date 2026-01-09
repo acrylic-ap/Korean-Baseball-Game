@@ -14,8 +14,16 @@ import {
 import { styled } from "styled-components";
 import React from "react";
 import { useAtom } from "jotai";
-import { gameAtom, IGame, IPlayer, myIdAtom } from "@/app/atom/gameAtom";
+import {
+  gameAtom,
+  IGame,
+  IPlayer,
+  IUser,
+  myIdAtom,
+  myUserInfoAtom,
+} from "@/app/atom/gameAtom";
 import { SolvingListComponent } from "./components/SolvingListComponent";
+import { userAgent } from "next/server";
 
 const GamePage = styled.div`
   background: linear-gradient(135deg, #242424 0%, #0b0b0b 100%);
@@ -327,7 +335,7 @@ const Chat = styled.div`
   box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.3);
 
   width: 90%;
-  height: 130px;
+  height: 160px;
 
   border-radius: 10px;
 
@@ -339,6 +347,8 @@ const Chat = styled.div`
 const ChatText = styled.div`
   width: 100%;
   height: 75%;
+
+  margin: 10px;
 
   overflow-y: auto;
 
@@ -359,10 +369,30 @@ const ChatContent = styled.p`
   margin-top: 10px;
   margin-left: 10px;
 
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+
   @media screen and (min-width: 768px) {
     font-size: 12pt;
   }
 `;
+
+const HostChat = styled.div`
+  width: 12px;
+  height: 12px;
+
+  margin-right: 3px;
+  margin-bottom: 4px;
+`;
+
+const Nickname = styled.p``;
+
+const Seperator = styled.p`
+  margin: 0 5px;
+`;
+
+const Message = styled.p``;
 
 const ChatInputContainer = styled.div`
   width: 100%;
@@ -421,6 +451,7 @@ export default function GameRoom() {
   const { id } = useParams();
   const router = useRouter();
   const [game, setGame] = useAtom(gameAtom);
+  const [myUserInfo, setMyUserInfo] = useAtom(myUserInfoAtom);
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
 
   const [myId, setMyId] = useAtom<string | null>(myIdAtom);
@@ -438,29 +469,67 @@ export default function GameRoom() {
   useEffect(() => {
     if (!id) return;
 
+    const getMyUserData = async () => {
+      const myUserId = localStorage.getItem("userId") || "";
+      const userRef = ref(rtdb, `users/${myUserId}`);
+      const user = await get(userRef).then(
+        (snapshot) => snapshot.val() as IUser
+      );
+
+      setMyUserInfo(user);
+    };
+
+    getMyUserData();
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+
     const gameRef = ref(rtdb, `games/${id}`);
+    const myUserId = localStorage.getItem("userId") || "";
 
-    get(gameRef).then((snapshot) => {
+    return onValue(gameRef, (snapshot) => {
       const snapshotData = snapshot.val();
-
       const { remainingTime, ...gameData } = snapshotData as IGame;
 
-      if (!gameData) {
-        router.replace("/lobby"); // 방이 없으면 로비로
+      setMyId(myUserId);
+      if (remainingTime) setRemainingTime(remainingTime);
+      setGame(gameData);
+      setIsHost(myUserId === gameData.hostId);
+    });
+  }, [id]);
+
+  useEffect(() => {
+    if (!id || !myUserInfo) return;
+
+    const gameRef = ref(rtdb, `games/${id}`);
+    const myUserId = localStorage.getItem("userId") || "";
+
+    get(gameRef).then((snapshot) => {
+      if (!snapshot.exists()) {
+        router.replace("/lobby");
         return;
       }
 
-      const myUserId = localStorage.getItem("userId") || "";
+      runTransaction(gameRef, (game: IGame | null) => {
+        if (!game) return game;
 
-      setMyId(myUserId);
-
-      setGame(gameData); // 데이터 세팅
-
-      if (remainingTime) setRemainingTime(remainingTime);
-
-      setIsHost(myUserId === gameData.hostId);
+        if (!game.players?.[myUserId]) {
+          return {
+            ...game,
+            spectators: {
+              ...(game.spectators ?? {}),
+              [myUserId]: {
+                userId: myUserId,
+                username: myUserInfo?.nickname,
+              },
+            },
+          };
+        }
+        return game;
+      });
     });
-  }, [id, router]);
+  }, [id, myUserInfo]);
 
   const timerRef = useRef<number | null>(null);
 
@@ -878,14 +947,11 @@ export default function GameRoom() {
     if (!chatText) return;
 
     const chatsRef = ref(rtdb, `chats/${id}`); // RTDB 경로
-    const nicknameRef = ref(rtdb, `games/${id}/players/${myId}/nickname`);
-
-    const nickname = await (await get(nicknameRef)).val();
 
     push(chatsRef, {
       message: chatText,
       userId: myId,
-      nickname: nickname,
+      nickname: myUserInfo?.nickname,
     });
 
     setChatText("");
@@ -950,6 +1016,8 @@ export default function GameRoom() {
     });
   });
 
+  const isPlaying = game.players && myId && game.players[myId] ? true : false;
+
   return (
     <GamePage>
       <Header></Header>
@@ -957,25 +1025,29 @@ export default function GameRoom() {
         <Title>{game.title}</Title>
         {game.gameState === "deciding" ? (
           <GameContainer>
-            {!hasDecided ? (
+            {isPlaying && !hasDecided ? (
               <Subtitle>상대방이 맞힐 단어를 정해 주세요!</Subtitle>
-            ) : (
+            ) : isPlaying ? (
               <DecideWaitTitle>상대방을 기다리고 있어요...</DecideWaitTitle>
+            ) : (
+              <Subtitle>플레이어들이 단어를 정하고 있어요.</Subtitle>
             )}
-            <InputContainer>
-              <Input
-                $enabled={hasDecided}
-                type="text"
-                value={decideText}
-                onChange={handleTextChange}
-                onKeyDown={handleSubmitDecideChange}
-                maxLength={9}
-                disabled={hasDecided}
-              />
-              <SubmitButton $enabled={hasDecided} onClick={submitDecide}>
-                {!hasDecided ? "완료" : "수정"}
-              </SubmitButton>
-            </InputContainer>
+            {isPlaying && (
+              <InputContainer>
+                <Input
+                  $enabled={hasDecided}
+                  type="text"
+                  value={decideText}
+                  onChange={handleTextChange}
+                  onKeyDown={handleSubmitDecideChange}
+                  maxLength={9}
+                  disabled={hasDecided}
+                />
+                <SubmitButton $enabled={hasDecided} onClick={submitDecide}>
+                  {!hasDecided ? "완료" : "수정"}
+                </SubmitButton>
+              </InputContainer>
+            )}
 
             <PlayerDecidedContainer>
               {game.players &&
@@ -1024,8 +1096,10 @@ export default function GameRoom() {
               ) : (
                 <>
                   <SolvingTitle>
-                    {`잠시만 기다려 주세요, 
-상대가 단어를 고르고 있어요.`}
+                    {isPlaying
+                      ? `잠시만 기다려 주세요, 
+상대가 단어를 고르고 있어요.`
+                      : "관전 중입니다."}
                   </SolvingTitle>
                 </>
               )}
@@ -1055,9 +1129,30 @@ export default function GameRoom() {
             <ChatText>
               {chatList.map((chat) => (
                 <ChatContent>
-                  {`${chat.nickname}${chat.userId === myId ? "(나)" : ""}: ${
-                    chat.message
-                  }`}
+                  {game.hostId === chat.userId && (
+                    <HostChat>
+                      <svg
+                        width="100%"
+                        height="100%"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M3 7L7.5 12L12 6L16.5 12L21 7V19H3V7Z"
+                          fill="#F5C542"
+                          stroke="#F5C542"
+                          stroke-width="1.5"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </HostChat>
+                  )}
+                  <Nickname>
+                    {chat.nickname ? chat.nickname : "닉네임 없음"}
+                    {chat.userId === myId ? "(나)" : ""}
+                  </Nickname>
+                  <Seperator>|</Seperator>
+                  <Message>{chat.message}</Message>
                 </ChatContent>
               ))}
               <div ref={chatEndRef} />
