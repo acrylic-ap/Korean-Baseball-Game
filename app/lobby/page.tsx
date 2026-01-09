@@ -9,9 +9,12 @@ import {
   serverTimestamp,
   onDisconnect,
 } from "firebase/database";
+import { useAtom } from "jotai";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import styled from "styled-components";
+import { isCreateOpenAtom } from "../atom/roomCreateModalAtom";
+import { RoomCreateModal } from "./components/RoomCreateModal";
 
 /* --- Styles --- */
 const LobbyContainer = styled.div`
@@ -107,6 +110,14 @@ const RoomCapacity = styled.p`
   right: 15px;
   bottom: 10px;
   font-size: 12pt;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const UnavailableSpectator = styled.svg`
+  margin-left: 7px;
 `;
 
 interface IRoom {
@@ -117,6 +128,7 @@ interface IRoom {
   hostNickname: string;
   hostId: string;
   gameState: "waiting" | "playing";
+  locked: boolean;
 }
 
 export default function Lobby() {
@@ -167,25 +179,10 @@ export default function Lobby() {
     return () => unsubscribe();
   }, []);
 
-  const handleCreateRoom = async () => {
-    if (!userId) return;
-    const title = prompt("방 제목:");
-    if (!title) return;
+  const [isCreateOpen, setIsCreateOpen] = useAtom(isCreateOpenAtom);
 
-    const newRoomRef = push(ref(rtdb, "rooms"));
-    await set(newRoomRef, {
-      title,
-      current: 1,
-      max: 2,
-      hostId: userId,
-      hostNickname: nickname,
-      gameState: "waiting",
-      createdAt: serverTimestamp(),
-      players: {
-        [userId]: { uid: userId, nickname, joinedAt: serverTimestamp() },
-      },
-    });
-    router.replace(`/room/${newRoomRef.key}`);
+  const handleCreateRoom = async () => {
+    setIsCreateOpen(true);
   };
 
   const handleEnterRoom = async (roomId: string) => {
@@ -193,16 +190,42 @@ export default function Lobby() {
     const userRef = ref(rtdb, `rooms/${roomId}/players/${userId}`);
 
     const result = await runTransaction(roomRef, (currentData) => {
-      if (currentData) {
-        if (currentData.current >= currentData.max) return; // 방 꽉 참
+      if (!currentData) return currentData;
+
+      // 이미 플레이어로 들어와 있으면 아무 것도 안 함
+      if (currentData.players?.[userId]) {
+        return currentData;
+      }
+
+      // 플레이어 자리가 남아 있으면 → 플레이어 입장
+      if (currentData.current < currentData.max) {
         currentData.current = (currentData.current || 0) + 1;
+
         if (!currentData.players) currentData.players = {};
+
         currentData.players[userId] = {
           uid: userId,
           nickname,
           joinedAt: Date.now(),
         };
+
+        return currentData;
       }
+
+      if (currentData.locked) {
+        alert("관전이 불가능한 방입니다.");
+        return;
+      }
+
+      // 관전자 입장
+      if (!currentData.spectators) currentData.spectators = {};
+
+      currentData.spectators[userId] = {
+        uid: userId,
+        nickname,
+        joinedAt: Date.now(),
+      };
+
       return currentData;
     });
 
@@ -210,13 +233,12 @@ export default function Lobby() {
       // Disconnect 처리
       onDisconnect(userRef).remove();
       router.replace(`/room/${roomId}`);
-    } else {
-      alert("방이 가득 찼습니다!");
     }
   };
 
   return (
     <LobbyContainer>
+      <RoomCreateModal userId={userId} nickname={nickname} />
       <Header>
         <Title>한국어 야구 게임</Title>
         <UserNickname>
@@ -228,16 +250,7 @@ export default function Lobby() {
           {rooms
             .filter((room) => room.gameState === "waiting")
             .map((room, index) => (
-              <Room
-                key={room.id}
-                onClick={() => {
-                  if (room.current >= room.max) {
-                    alert("방이 가득 찼습니다!");
-                    return;
-                  }
-                  handleEnterRoom(room.id);
-                }}
-              >
+              <Room key={room.id} onClick={() => handleEnterRoom(room.id)}>
                 <RoomNumber>{index + 1}</RoomNumber>
                 <RoomInfoWrapper>
                   <RoomTitle>{room.title}</RoomTitle>
@@ -245,6 +258,31 @@ export default function Lobby() {
                 </RoomInfoWrapper>
                 <RoomCapacity>
                   {room.current}/{room.max}
+                  {room.locked && (
+                    <UnavailableSpectator
+                      width="15"
+                      height="13"
+                      viewBox="0 0 20 16"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        clipRule="evenodd"
+                        d="M0 8C0 9.64 0.425 10.191 1.275 11.296C2.972 13.5 5.818 16 10 16C14.182 16 17.028 13.5 18.725 11.296C19.575 10.192 20 9.639 20 8C20 6.36 19.575 5.809 18.725 4.704C17.028 2.5 14.182 0 10 0C5.818 0 2.972 2.5 1.275 4.704C0.425 5.81 0 6.361 0 8ZM10 4.25C9.00544 4.25 8.05161 4.64509 7.34835 5.34835C6.64509 6.05161 6.25 7.00544 6.25 8C6.25 8.99456 6.64509 9.94839 7.34835 10.6517C8.05161 11.3549 9.00544 11.75 10 11.75C10.9946 11.75 11.9484 11.3549 12.6517 10.6517C13.3549 9.94839 13.75 8.99456 13.75 8C13.75 7.00544 13.3549 6.05161 12.6517 5.34835C11.9484 4.64509 10.9946 4.25 10 4.25Z"
+                        fill="white"
+                      />
+                      <line
+                        x1="2"
+                        y1="2"
+                        x2="18"
+                        y2="14"
+                        stroke="red"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </UnavailableSpectator>
+                  )}
                 </RoomCapacity>
               </Room>
             ))}

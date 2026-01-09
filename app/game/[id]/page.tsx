@@ -24,6 +24,7 @@ import {
 } from "@/app/atom/gameAtom";
 import { SolvingListComponent } from "./components/SolvingListComponent";
 import { userAgent } from "next/server";
+import { getFinal, getInitial, getMedial } from "./tools/getJamo";
 
 const GamePage = styled.div`
   background: linear-gradient(135deg, #242424 0%, #0b0b0b 100%);
@@ -457,6 +458,12 @@ export default function GameRoom() {
   const [myId, setMyId] = useAtom<string | null>(myIdAtom);
   const [isHost, setIsHost] = useState<boolean>(false);
 
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (inputRef.current) inputRef.current.focus();
+  }, [game]);
+
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
@@ -670,105 +677,6 @@ export default function GameRoom() {
     }
 
     update(playerRef, { guessWord: decideText, isDecide: true });
-  };
-
-  // 한 글자 초성 뽑는 함수
-  const getInitial = (ch: string) => {
-    const INITIALS = [
-      "ㄱ",
-      "ㄲ",
-      "ㄴ",
-      "ㄷ",
-      "ㄸ",
-      "ㄹ",
-      "ㅁ",
-      "ㅂ",
-      "ㅃ",
-      "ㅅ",
-      "ㅆ",
-      "ㅇ",
-      "ㅈ",
-      "ㅉ",
-      "ㅊ",
-      "ㅋ",
-      "ㅌ",
-      "ㅍ",
-      "ㅎ",
-    ];
-
-    const code = ch.charCodeAt(0);
-    if (code < 0xac00 || code > 0xd7a3) return ch; // 한글 아니면 그대로
-    const idx = Math.floor((code - 0xac00) / 588);
-    return INITIALS[idx];
-  };
-
-  const getMedial = (ch: string): string => {
-    const MEDIALS = [
-      "ㅏ",
-      "ㅐ",
-      "ㅑ",
-      "ㅒ",
-      "ㅓ",
-      "ㅔ",
-      "ㅕ",
-      "ㅖ",
-      "ㅗ",
-      "ㅘ",
-      "ㅙ",
-      "ㅚ",
-      "ㅛ",
-      "ㅜ",
-      "ㅝ",
-      "ㅞ",
-      "ㅟ",
-      "ㅠ",
-      "ㅡ",
-      "ㅢ",
-      "ㅣ",
-    ];
-
-    const code = ch.charCodeAt(0);
-    if (code < 0xac00 || code > 0xd7a3) return "";
-    const medialIndex = Math.floor(((code - 0xac00) % 588) / 28);
-    return MEDIALS[medialIndex];
-  };
-
-  const getFinal = (ch: string): string => {
-    const FINAL_CONSONANTS = [
-      "",
-      "ㄱ",
-      "ㄲ",
-      "ㄳ",
-      "ㄴ",
-      "ㄵ",
-      "ㄶ",
-      "ㄷ",
-      "ㄹ",
-      "ㄺ",
-      "ㄻ",
-      "ㄼ",
-      "ㄽ",
-      "ㄾ",
-      "ㄿ",
-      "ㅀ",
-      "ㅁ",
-      "ㅂ",
-      "ㅄ",
-      "ㅅ",
-      "ㅆ",
-      "ㅇ",
-      "ㅈ",
-      "ㅊ",
-      "ㅋ",
-      "ㅌ",
-      "ㅍ",
-      "ㅎ",
-    ];
-
-    const code = ch.charCodeAt(0);
-    if (code < 0xac00 || code > 0xd7a3) return "";
-    const finalIndex = (code - 0xac00) % 28;
-    return FINAL_CONSONANTS[finalIndex];
   };
 
   const resultWord = (targetWord: string, compareWord: string) => {
@@ -1042,6 +950,7 @@ export default function GameRoom() {
                   onKeyDown={handleSubmitDecideChange}
                   maxLength={9}
                   disabled={hasDecided}
+                  ref={inputRef}
                 />
                 <SubmitButton $enabled={hasDecided} onClick={submitDecide}>
                   {!hasDecided ? "완료" : "수정"}
@@ -1078,6 +987,7 @@ export default function GameRoom() {
                       value={decideText}
                       onChange={handleTextChange}
                       onKeyDown={handleGuessChange}
+                      ref={inputRef}
                     />
                     <SubmitButton onClick={guess}>확인</SubmitButton>
                   </InputContainer>

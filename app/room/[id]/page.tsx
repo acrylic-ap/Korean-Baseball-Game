@@ -11,7 +11,6 @@ import {
   set,
   serverTimestamp,
   remove,
-  off,
   update,
 } from "firebase/database";
 
@@ -42,6 +41,8 @@ const BackButton = styled.button`
   }
 `;
 const RoomInfo = styled.div`
+  width: 70%;
+
   margin-left: 20px;
 `;
 const RoomTitle = styled.h1`
@@ -52,6 +53,22 @@ const Capacity = styled.span`
   color: #aaa;
   font-size: 0.9rem;
 `;
+
+const Spectator = styled.div`
+  width: 10%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const SpectatorCount = styled.p`
+  margin-left: 6px;
+
+  color: #8b5cf6;
+  font-size: 14pt;
+`;
+
 const GameSection = styled.div`
   flex: 1;
   display: flex;
@@ -135,6 +152,7 @@ interface IRoomData {
   hostNickname: string;
   gameState: "waiting" | "playing";
   players?: Record<string, IPlayerData>;
+  spectators?: Record<string, IPlayerData>;
 }
 
 export default function WaitingRoom() {
@@ -148,16 +166,30 @@ export default function WaitingRoom() {
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
-      e.returnValue = ""; // 크롬 등 대부분의 브라우저에서 기본 경고창을 띄움
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
+  useEffect(() => {
+    const roomRef = ref(rtdb, `rooms/${id}`);
+
+    const uid = localStorage.getItem("userId") || "";
+    setMyUid(uid);
+
+    return onValue(roomRef, (snapshot) => {
+      const data = snapshot.val();
+      setRoomData(data);
+      setIsDataLoaded(true);
+    });
+  }, [id]);
+
   // --- 플레이어 준비 토글 ---
   const toggleReady = () => {
-    if (!roomData?.players) return;
+    if (!roomData) return;
+
+    if (!roomData.players) return;
     const playerData = roomData.players[myUid];
     if (!playerData) return;
 
@@ -178,25 +210,25 @@ export default function WaitingRoom() {
   };
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !roomData) return;
 
     const uid = localStorage.getItem("userId") || "";
     const nickname = localStorage.getItem("userNickname") || "익명";
-    setMyUid(uid);
 
     const roomRef = ref(rtdb, `rooms/${id}`);
     const myPlayerRef = ref(rtdb, `rooms/${id}/players/${uid}`);
 
     // --- 1. 플레이어 정보 등록 + onDisconnect ---
-    set(myPlayerRef, {
-      uid,
-      nickname,
-      joinedAt: serverTimestamp(),
-      ready: false,
-    }).then(() => {
-      onDisconnect(myPlayerRef).remove(); // 강제 종료 시 플레이어 제거
-      onDisconnect(roomRef).update({ current: 1 });
-    });
+    if (roomData?.current < 2) {
+      set(myPlayerRef, {
+        uid,
+        nickname,
+        joinedAt: serverTimestamp(),
+        ready: false,
+      }).then(() => {
+        onDisconnect(myPlayerRef).remove(); // 강제 종료 시 플레이어 제거
+      });
+    }
 
     // --- 2. 리스너 연결 ---
     const unsubscribe = onValue(roomRef, (snapshot) => {
@@ -226,53 +258,21 @@ export default function WaitingRoom() {
           });
         }
       }
-
-      setRoomData(data);
-      setIsDataLoaded(true);
     });
 
     // --- 4. cleanup / 나가기 ---
     return () => {
-      isLeaving.current = true;
-
-      // 내 플레이어 정보 삭제
-      remove(myPlayerRef).catch(() => {});
-
-      // 방 정보 트랜잭션
-      runTransaction(roomRef, (prev) => {
-        if (!prev) return prev;
-
-        // --- 게임 중이면 방 삭제 로직 스킵 ---
-        if (prev.gameState === "playing") {
-          // 플레이어 정보만 삭제, 방 자체는 삭제하지 않음
-          if (prev.players && prev.players[uid]) delete prev.players[uid];
-          prev.current = Math.max(0, (prev.current || 1) - 1);
-          return prev;
-        }
-
-        // --- 게임 전(대기 중) --- 기존 로직 그대로
-        if (prev.players && prev.players[uid]) delete prev.players[uid];
-        prev.current = Math.max(0, (prev.current || 1) - 1);
-
-        // 모든 플레이어가 나가면 방 삭제
-        if (
-          (!prev.players || Object.keys(prev.players).length === 0) &&
-          prev.current === 0
-        ) {
-          return null;
-        }
-
-        return prev;
-      }).catch(() => {});
-
-      // 리스너 정리
-      off(roomRef);
+      if (!isLeaving.current) {
+        remove(myPlayerRef).catch(() => {});
+      }
     };
   }, [id, router]);
 
   // --- 3. gameState 자동 이동 ---
   useEffect(() => {
-    if (roomData?.gameState === "playing") {
+    if (!roomData) return;
+
+    if (roomData.gameState === "playing") {
       const gameRef = ref(rtdb, `games/${id}`);
       const roomRef = ref(rtdb, `rooms/${id}`);
 
@@ -305,31 +305,87 @@ export default function WaitingRoom() {
   const allReady =
     readyPlayers.length > 0 && readyPlayers.every((p) => p.ready);
 
+  const leaveRoom = async () => {
+    if (!roomData || !myUid) return;
+
+    isLeaving.current = true;
+
+    const roomRef = ref(rtdb, `rooms/${id}`);
+
+    await runTransaction(roomRef, (prev) => {
+      if (!prev) return prev;
+
+      const isPlayer = prev.players && prev.players[myUid];
+      const isSpectator = prev.spectators && prev.spectators[myUid];
+
+      // --- 플레이어 나가기 처리 ---
+      if (isPlayer) {
+        delete prev.players![myUid];
+        prev.current = Math.max(0, (prev.current || 1) - 1);
+      }
+
+      // --- 관전자 나가기 처리 (current는 감소 X) ---
+      if (isSpectator) {
+        delete prev.spectators![myUid];
+      }
+
+      // --- 호스트 승계 ---
+      if (isPlayer && prev.hostId === myUid) {
+        const playersArray = Object.values(prev.players || []) as IPlayerData[];
+        if (playersArray.length > 0) {
+          const newHost = playersArray.sort(
+            (a, b) => (a.joinedAt || 0) - (b.joinedAt || 0)
+          )[0];
+          prev.hostId = newHost.uid;
+          prev.hostNickname = newHost.nickname;
+          if (prev.players![newHost.uid])
+            prev.players![newHost.uid].ready = false;
+        }
+      }
+
+      // --- 방 삭제 조건 ---
+      if (
+        (!prev.players || Object.keys(prev.players).length === 0) &&
+        (!prev.spectators || Object.keys(prev.spectators).length === 0)
+      ) {
+        return null;
+      }
+
+      return prev;
+    });
+
+    router.replace("/lobby");
+  };
+
   return (
     <RoomContainer>
       <Header>
-        <BackButton
-          onClick={() => {
-            isLeaving.current = true;
-            router.replace("/lobby");
-          }}
-        >
-          ← 나가기
-        </BackButton>
+        <BackButton onClick={leaveRoom}>← 나가기</BackButton>
         <RoomInfo>
           <RoomTitle>{roomData.title}</RoomTitle>
           <Capacity>
             {roomData.current} / {roomData.max}
           </Capacity>
         </RoomInfo>
+        <Spectator>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M2 12C2 12 6 5 12 5C18 5 22 12 22 12C22 12 18 19 12 19C6 19 2 12 2 12Z"
+              stroke="#8B5CF6"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <circle cx="12" cy="12" r="3" stroke="#8B5CF6" stroke-width="2" />
+          </svg>
+          <SpectatorCount>
+            {roomData.spectators ? Object.keys(roomData.spectators).length : 0}
+          </SpectatorCount>
+        </Spectator>
       </Header>
       <GameSection>
         <StatusBoard>
-          <h2>
-            {roomData.gameState === "playing"
-              ? "🎮 게임 중"
-              : "야구 게임 대기 중"}
-          </h2>
+          <h2>대기실</h2>
           <PlayerList>
             {players.map((p) => (
               <PlayerCard key={p.uid} $isHost={p.uid === roomData.hostId}>
@@ -344,24 +400,26 @@ export default function WaitingRoom() {
           </PlayerList>
         </StatusBoard>
 
-        {roomData.gameState === "waiting" && (
-          <>
-            {isHost ? (
-              <StartButton
-                disabled={!allReady}
-                onClick={() =>
-                  set(ref(rtdb, `rooms/${id}/gameState`), "playing")
-                }
-              >
-                게임 시작
-              </StartButton>
-            ) : (
-              <StartButton onClick={toggleReady}>
-                {roomData.players?.[myUid]?.ready ? "준비 취소" : "준비"}
-              </StartButton>
-            )}
-          </>
-        )}
+        {roomData.players &&
+          roomData.players[myUid] &&
+          roomData.gameState === "waiting" && (
+            <>
+              {isHost ? (
+                <StartButton
+                  disabled={!allReady}
+                  onClick={() =>
+                    set(ref(rtdb, `rooms/${id}/gameState`), "playing")
+                  }
+                >
+                  게임 시작
+                </StartButton>
+              ) : (
+                <StartButton onClick={toggleReady}>
+                  {roomData.players?.[myUid]?.ready ? "준비 취소" : "준비"}
+                </StartButton>
+              )}
+            </>
+          )}
       </GameSection>
     </RoomContainer>
   );
