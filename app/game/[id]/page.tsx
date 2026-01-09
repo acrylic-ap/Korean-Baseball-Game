@@ -1112,13 +1112,16 @@ export default function GameRoom() {
 
               <EndFieldContainer>
                 <EndTitle>
-                  {!game.winner
-                    ? "왓"
-                    : game.winner !== myId
-                    ? "패배하셨습니다."
-                    : "당신이 승리하셨습니다!"}
+                  {game.players && game.winner
+                    ? !isPlaying
+                      ? game.players[game.winner].nickname +
+                        " 님이 승리하셨습니다!"
+                      : game.winner !== myId
+                      ? "패배하셨습니다."
+                      : "당신이 승리하셨습니다!"
+                    : "오류"}
                 </EndTitle>
-                <Answer>정답: {correctWord}</Answer>
+                {isPlaying && <Answer>정답: {correctWord}</Answer>}
                 <LobbyButton onClick={back}>돌아가기</LobbyButton>
               </EndFieldContainer>
             </EndContainer>

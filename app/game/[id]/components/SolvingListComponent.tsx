@@ -1,5 +1,11 @@
 "use client";
-import { gameAtom, IUser, myIdAtom, myUserInfoAtom } from "@/app/atom/gameAtom";
+import {
+  gameAtom,
+  IPlayer,
+  IUser,
+  myIdAtom,
+  myUserInfoAtom,
+} from "@/app/atom/gameAtom";
 import { useAtom } from "jotai";
 import { useEffect, useMemo, useState } from "react";
 import { styled } from "styled-components";
@@ -279,6 +285,12 @@ export const SolvingListComponent = () => {
     setSpectatingPlayerId(playerIds[nextIndex]);
   };
 
+  const getOpponentId = (playerId: string): string => {
+    if (!game.players) return "";
+    const opponent = Object.keys(game.players).find((id) => id !== playerId);
+    return !opponent ? "" : opponent;
+  };
+
   return (
     <SolvingListContainer>
       <ButtonContainer>
@@ -356,11 +368,20 @@ export const SolvingListComponent = () => {
         )}
       </ButtonContainer>
       <SolvingList>
-        {isPlaying && !showMine && (
-          <ResultCharContainer>
-            {myId && `✔ ${game?.players?.[myId]?.guessWord}`}
-          </ResultCharContainer>
-        )}
+        {isPlaying
+          ? !showMine && (
+              <ResultCharContainer>
+                {myId && `✔ ${game?.players?.[myId]?.guessWord}`}
+              </ResultCharContainer>
+            )
+          : game.gameState === "end" &&
+            spectatingPlayerId && (
+              <ResultCharContainer>
+                {`✔ ${
+                  game?.players?.[getOpponentId(spectatingPlayerId)]?.guessWord
+                }`}
+              </ResultCharContainer>
+            )}
 
         {visibleGuessStack?.map((guess, idx) => (
           <ResultCharContainer>
