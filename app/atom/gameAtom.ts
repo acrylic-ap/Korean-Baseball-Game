@@ -11,6 +11,7 @@ export interface IPlayer {
   nickname: string;
   guessWord?: string;
   isDecide?: boolean;
+  penaltyStack?: number;
 }
 
 export interface IGame {

@@ -540,6 +540,7 @@ export default function GameRoom() {
       if (!isHost) return;
 
       const remainingTimeRef = ref(rtdb, `games/${id}/remainingTime`);
+      const chatsRef = ref(rtdb, `chats/${id}`);
 
       switch (data.gameState) {
         case "deciding":
@@ -593,13 +594,48 @@ export default function GameRoom() {
               }
 
               const players: IPlayer[] = Object.values(snapshotData.players!);
+
+              const currentPlayer = players.find(
+                (p) => p.uid === snapshotData.currentOrder
+              );
+
               const nextPlayer = players.find(
                 (p) => p.uid !== snapshotData.currentOrder
               );
 
+              const currentPlayerRef = ref(
+                rtdb,
+                `games/${id}/players/${currentPlayer?.uid}`
+              );
+
+              if (!currentPlayer || !nextPlayer) return;
+
               update(gameRef, {
-                currentOrder: nextPlayer?.uid,
+                currentOrder: nextPlayer.uid,
               });
+
+              const penaltyCount = (currentPlayer.penaltyStack ?? 0) + 1;
+
+              update(currentPlayerRef, {
+                penaltyStack: penaltyCount,
+              });
+
+              if (penaltyCount === 2) {
+                push(chatsRef, {
+                  nickname: "System",
+                  message: `2턴 동안 단어를 보내지 않았습니다. 다음 턴에 보내지 않을 시 패배 처리합니다.`,
+                });
+              } else if (penaltyCount === 3) {
+                push(chatsRef, {
+                  nickname: "System",
+                  message: `3턴간 단어를 보내지 않아 패배 처리합니다.`,
+                });
+
+                update(gameRef, {
+                  gameState: "end",
+                  winner: nextPlayer.uid,
+                });
+              }
 
               return 30;
             });
@@ -761,6 +797,12 @@ export default function GameRoom() {
     if (!myId || !game.players) return;
 
     if (!decideText) return;
+
+    const playerRef = ref(rtdb, `games/${id}/players/${myId}`);
+
+    update(playerRef, {
+      penaltyStack: 0,
+    });
 
     // 두 명 플레이어
     const players = Object.values(game.players);
