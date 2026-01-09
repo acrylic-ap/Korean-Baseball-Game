@@ -364,11 +364,14 @@ const ChatText = styled.div`
   }
 `;
 
-const ChatContent = styled.p`
-  font-size: 10pt;
-
+const ChatContent = styled.p<{ $isPlaying: boolean }>`
   margin-top: 10px;
   margin-left: 10px;
+
+  color: ${({ $isPlaying }) =>
+    $isPlaying ? "white" : "rgba(255, 255, 255, 0.4)"};
+
+  font-size: 10pt;
 
   display: flex;
   align-items: center;
@@ -1041,7 +1044,9 @@ export default function GameRoom() {
           <Chat>
             <ChatText>
               {chatList.map((chat) => (
-                <ChatContent>
+                <ChatContent
+                  $isPlaying={!!(game.players && game.players[chat.userId])}
+                >
                   {game.hostId === chat.userId && (
                     <HostChat>
                       <svg
