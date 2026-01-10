@@ -46,7 +46,7 @@ export const TimerComponent = () => {
   if (!remainingTime || !totalTime) return null;
 
   useEffect(() => {
-    if (remainingTime <= 3) {
+    if (remainingTime <= 4) {
       const audio = new Audio("/music/SE/alert.mp3");
       audio.play();
     }

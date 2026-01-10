@@ -10,6 +10,7 @@ import {
   runTransaction,
   push,
   onChildAdded,
+  set,
 } from "firebase/database";
 import { styled } from "styled-components";
 import React from "react";
@@ -435,8 +436,26 @@ export default function GameRoom() {
 
   const [myId, setMyId] = useAtom<string | null>(myIdAtom);
   const [isHost, setIsHost] = useState<boolean>(false);
+  const [playTimeover, setPlayTimeover] = useState<boolean>(false);
+  const [playGameSet, setPlayGameSet] = useState<boolean>(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (playTimeover) {
+      const audio = new Audio("/music/SE/timeover.mp3");
+      audio.play();
+      setPlayTimeover(false);
+    }
+  }, [playTimeover]);
+
+  useEffect(() => {
+    if (playTimeover) {
+      const audio = new Audio("/music/SE/game_end.mp3");
+      audio.play();
+      setPlayGameSet(false);
+    }
+  }, [playGameSet]);
 
   useEffect(() => {
     if (inputRef.current) inputRef.current.focus();
@@ -545,6 +564,11 @@ export default function GameRoom() {
 
       if (remainingTime) setRemainingTime(remainingTime);
 
+      if (data.gameState === "end") {
+        setPlayGameSet(true);
+        console.log("?");
+      }
+
       if (!isHost) return;
 
       const remainingTimeRef = ref(rtdb, `games/${id}/remainingTime`);
@@ -644,6 +668,8 @@ export default function GameRoom() {
                   winner: nextPlayer.uid,
                 });
               }
+
+              setPlayTimeover(true);
 
               if (game.time === "default") return 30;
               else if (game.time === "speedy") return 10;
