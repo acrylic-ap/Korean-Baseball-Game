@@ -4,7 +4,7 @@ import { rtdb } from "@/lib/client";
 import { ref } from "firebase/storage";
 import { useAtom } from "jotai";
 import { useParams } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { styled } from "styled-components";
 
 const TurnTime = styled.div<{ $remainingTime: number; $totalTime: number }>`
@@ -44,6 +44,13 @@ export const TimerComponent = () => {
   const [totalTime] = useAtom(totalTimeAtom);
 
   if (!remainingTime || !totalTime) return null;
+
+  useEffect(() => {
+    if (remainingTime <= 3) {
+      const audio = new Audio("/music/SE/alert.mp3");
+      audio.play();
+    }
+  }, [remainingTime]);
 
   return <TurnTime $remainingTime={remainingTime} $totalTime={totalTime} />;
 };
