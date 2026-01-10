@@ -172,6 +172,7 @@ interface IRoomData {
   players?: Record<string, IPlayerData>;
   spectators?: Record<string, IPlayerData>;
   locked: boolean;
+  time: string;
 }
 
 export default function WaitingRoom() {
@@ -268,12 +269,25 @@ export default function WaitingRoom() {
       const gameRef = ref(rtdb, `games/${id}`);
       const roomRef = ref(rtdb, `rooms/${id}`);
 
+      const time =
+        roomData.time === "default"
+          ? 30
+          : roomData.time === "speedy"
+          ? 10
+          : roomData.time === "hyperspeed"
+          ? 5
+          : undefined;
+
       set(gameRef, roomData)
         .then(() => {
           remove(roomRef).catch(() => {});
         })
         .finally(() => {
-          update(gameRef, { gameState: "deciding", remainingTime: 30 });
+          update(gameRef, {
+            gameState: "deciding",
+            ...(time !== undefined ? { remainingTime: time } : {}),
+          });
+
           router.replace(`/game/${id}`);
         });
     }

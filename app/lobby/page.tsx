@@ -160,11 +160,11 @@ export default function Lobby() {
     setIsNicknameOpen(true);
   };
 
-  useEffect(() => {
+  const initGuestUser = () => {
+    // 게스트 생성 / 불러오기
     let savedId = localStorage.getItem("userId");
     let savedNickname = localStorage.getItem("userNickname");
 
-    // 게스트 등록
     if (!savedId) {
       savedId = push(ref(rtdb, "users")).key || "user_" + Date.now();
       localStorage.setItem("userId", savedId);
@@ -185,7 +185,9 @@ export default function Lobby() {
       nickname: savedNickname,
       lastActive: serverTimestamp(),
     });
+  };
 
+  const subscribeRooms = () => {
     // 방 불러오기
     const roomsRef = ref(rtdb, "rooms");
 
@@ -193,14 +195,25 @@ export default function Lobby() {
       const data = snapshot.val();
       if (data) {
         setRooms(
-          Object.keys(data).map((key) => ({ id: key, ...data[key] })) as IRoom[]
+          Object.keys(data).map((key) => ({
+            id: key,
+            ...data[key],
+          })) as IRoom[]
         );
       } else {
         setRooms([]);
       }
     });
+    return unsubscribe;
+  };
 
-    return () => unsubscribe();
+  useEffect(() => {
+    initGuestUser();
+    const unsubscribeRooms = subscribeRooms();
+
+    return () => {
+      unsubscribeRooms();
+    };
   }, []);
 
   // 방 입장

@@ -27,6 +27,7 @@ export interface IGame {
     playerId: string;
   }[];
   remainingTime?: number;
+  time: string;
   spectators?: {
     userId: string;
   }
@@ -36,3 +37,4 @@ export const myIdAtom = atom<string | null>(null);
 export const gameAtom = atom<IGame | null>(null);
 export const myUserInfoAtom = atom<IUser | null>(null);
 export const remainingTimeAtom = atom<number | null>(null);
+export const totalTimeAtom = atom<number | null>(null);

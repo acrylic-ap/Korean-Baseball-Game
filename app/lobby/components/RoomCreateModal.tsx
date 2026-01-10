@@ -171,7 +171,7 @@ export const RoomCreateModal = ({
 
   const [title, setTitle] = useState("");
   const [time, setTime] = useState<any[]>([
-    { label: "기본", value: "default" },
+    { label: "모데라토(30초)", value: "default" },
   ]);
 
   const [isCreateOpen, setIsCreateOpen] = useAtom(isCreateOpenAtom);
@@ -215,8 +215,9 @@ export const RoomCreateModal = ({
   if (!isCreateOpen) return false;
 
   const options = [
-    { value: "speedy", label: "타임 어택" },
-    { value: "default", label: "기본" },
+    { value: "hyperspeed", label: "프레스토(5초)" },
+    { value: "speedy", label: "안단티노(10초)" },
+    { value: "default", label: "모데라토(30초)" },
     { value: "infinity", label: "무제한" },
   ];
 
@@ -237,7 +238,7 @@ export const RoomCreateModal = ({
         <TimeRow>
           <TimeText>시간 설정</TimeText>
           <TimeSelect
-            style={{ width: "100px" }}
+            style={{ width: "140px" }}
             options={options}
             values={time}
             onChange={(values) => setTime(values)}

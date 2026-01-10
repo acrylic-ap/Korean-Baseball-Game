@@ -22,6 +22,7 @@ import {
   myIdAtom,
   myUserInfoAtom,
   remainingTimeAtom,
+  totalTimeAtom,
 } from "@/app/atom/gameAtom";
 import { SolvingListComponent } from "./components/SolvingListComponent";
 import { getFinal, getInitial, getMedial } from "./tools/getJamo";
@@ -426,9 +427,11 @@ const StyledChar = styled.span<{ $status: string }>`
 export default function GameRoom() {
   const { id } = useParams();
   const router = useRouter();
+
   const [game, setGame] = useAtom(gameAtom);
-  const [myUserInfo, setMyUserInfo] = useAtom(myUserInfoAtom);
   const [, setRemainingTime] = useAtom(remainingTimeAtom);
+  const [, setTotalTime] = useAtom(totalTimeAtom);
+  const [myUserInfo, setMyUserInfo] = useAtom(myUserInfoAtom);
 
   const [myId, setMyId] = useAtom<string | null>(myIdAtom);
   const [isHost, setIsHost] = useState<boolean>(false);
@@ -476,6 +479,11 @@ export default function GameRoom() {
 
       setMyId(myUserId);
       if (remainingTime) setRemainingTime(remainingTime);
+
+      if (gameData.time === "default") setTotalTime(30);
+      else if (gameData.time === "speedy") setTotalTime(10);
+      else if (gameData.time === "hyperspeed") setTotalTime(5);
+
       setGame(gameData);
       setIsHost(myUserId === gameData.hostId);
     });
@@ -637,7 +645,9 @@ export default function GameRoom() {
                 });
               }
 
-              return 30;
+              if (game.time === "default") return 30;
+              else if (game.time === "speedy") return 10;
+              else return 5;
             });
           }, 1000);
 
@@ -826,7 +836,12 @@ export default function GameRoom() {
       update(gameRef, {
         guessStack: [...(game.guessStack ?? []), newGuess],
         currentOrder: nextPlayer.uid,
-        remainingTime: 30,
+        ...(game.time !== "infinity"
+          ? {
+              remainingTime:
+                game.time === "default" ? 30 : game.time === "speedy" ? 10 : 5,
+            }
+          : {}),
       });
     }
 
@@ -993,7 +1008,7 @@ export default function GameRoom() {
             <SolvingListComponent />
 
             <SolvingFieldContainer>
-              <TimerComponent />
+              {game.time !== "infinity" && <TimerComponent />}
 
               {myId && game.currentOrder === myId ? (
                 <>
