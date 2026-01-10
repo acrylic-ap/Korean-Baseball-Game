@@ -8,7 +8,6 @@ import {
   set,
   serverTimestamp,
   onDisconnect,
-  update,
 } from "firebase/database";
 import { useAtom } from "jotai";
 import { useRouter } from "next/navigation";
@@ -17,6 +16,7 @@ import styled from "styled-components";
 import { isCreateOpenAtom } from "../atom/roomCreateModalAtom";
 import { RoomCreateModal } from "./components/RoomCreateModal";
 import { levenshtein } from "./tools/Levenshtein";
+import { UnavailableSpectator } from "@/public/svg/LobbySVG";
 
 /* --- Styles --- */
 const LobbyContainer = styled.div`
@@ -110,7 +110,7 @@ const HostInfo = styled.p`
 const RoomCapacity = styled.p`
   position: absolute;
   right: 15px;
-  bottom: 10px;
+  bottom: 7px;
   font-size: 12pt;
 
   display: flex;
@@ -118,8 +118,13 @@ const RoomCapacity = styled.p`
   justify-content: center;
 `;
 
-const UnavailableSpectator = styled.svg`
+const USContainer = styled.div`
   margin-left: 7px;
+  margin-top: 1px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 interface IRoom {
@@ -135,12 +140,12 @@ interface IRoom {
 
 export default function Lobby() {
   const router = useRouter();
+
   const [nickname, setNickname] = useState<string>("");
   const [userId, setUserId] = useState<string>("");
   const [rooms, setRooms] = useState<IRoom[]>([]);
 
   useEffect(() => {
-    // 사용자 ID와 닉네임 초기화
     let savedId = localStorage.getItem("userId");
     let savedNickname = localStorage.getItem("userNickname");
 
@@ -282,7 +287,7 @@ export default function Lobby() {
       <Header>
         <Title>한국어 야구 게임</Title>
         <UserNickname>
-          내 정보: <strong onClick={changeNickname}>{nickname}</strong>
+          닉네임: <strong onClick={changeNickname}>{nickname}</strong>
         </UserNickname>
       </Header>
       <Section>
@@ -299,29 +304,9 @@ export default function Lobby() {
                 <RoomCapacity>
                   {room.current}/{room.max}
                   {room.locked && (
-                    <UnavailableSpectator
-                      width="15"
-                      height="13"
-                      viewBox="0 0 20 16"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        clipRule="evenodd"
-                        d="M0 8C0 9.64 0.425 10.191 1.275 11.296C2.972 13.5 5.818 16 10 16C14.182 16 17.028 13.5 18.725 11.296C19.575 10.192 20 9.639 20 8C20 6.36 19.575 5.809 18.725 4.704C17.028 2.5 14.182 0 10 0C5.818 0 2.972 2.5 1.275 4.704C0.425 5.81 0 6.361 0 8ZM10 4.25C9.00544 4.25 8.05161 4.64509 7.34835 5.34835C6.64509 6.05161 6.25 7.00544 6.25 8C6.25 8.99456 6.64509 9.94839 7.34835 10.6517C8.05161 11.3549 9.00544 11.75 10 11.75C10.9946 11.75 11.9484 11.3549 12.6517 10.6517C13.3549 9.94839 13.75 8.99456 13.75 8C13.75 7.00544 13.3549 6.05161 12.6517 5.34835C11.9484 4.64509 10.9946 4.25 10 4.25Z"
-                        fill="white"
-                      />
-                      <line
-                        x1="2"
-                        y1="2"
-                        x2="18"
-                        y2="14"
-                        stroke="red"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                    </UnavailableSpectator>
+                    <USContainer>
+                      <UnavailableSpectator />
+                    </USContainer>
                   )}
                 </RoomCapacity>
               </Room>

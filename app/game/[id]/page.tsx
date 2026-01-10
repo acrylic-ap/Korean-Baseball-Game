@@ -27,6 +27,7 @@ import { SolvingListComponent } from "./components/SolvingListComponent";
 import { userAgent } from "next/server";
 import { getFinal, getInitial, getMedial } from "./tools/getJamo";
 import { TimerComponent } from "./components/TimerComponent";
+import { Host } from "@/public/svg/GameSVG";
 
 const GamePage = styled.div`
   background: linear-gradient(135deg, #242424 0%, #0b0b0b 100%);
@@ -1063,20 +1064,7 @@ export default function GameRoom() {
                 >
                   {game.hostId === chat.userId && (
                     <HostChat>
-                      <svg
-                        width="100%"
-                        height="100%"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <path
-                          d="M3 7L7.5 12L12 6L16.5 12L21 7V19H3V7Z"
-                          fill="#F5C542"
-                          stroke="#F5C542"
-                          stroke-width="1.5"
-                          stroke-linejoin="round"
-                        />
-                      </svg>
+                      <Host />
                     </HostChat>
                   )}
                   <Nickname>
