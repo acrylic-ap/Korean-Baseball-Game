@@ -164,10 +164,8 @@ export const RoomCreateModal = ({
   userId: string;
   nickname: string;
 }) => {
-  // useRouter
   const router = useRouter();
 
-  // useState
   const [loading, setLoading] = useState(false);
   const [locked, setLocked] = useState(false);
 
@@ -176,7 +174,6 @@ export const RoomCreateModal = ({
     { label: "기본", value: "default" },
   ]);
 
-  // Variable Atom
   const [isCreateOpen, setIsCreateOpen] = useAtom(isCreateOpenAtom);
 
   // 자동 포커싱
@@ -188,13 +185,10 @@ export const RoomCreateModal = ({
 
   // 방 생성
   const handleCreate = async () => {
-    // 중복 클릭 방지
     setLoading(true);
 
-    // 방 데이터 생성
     const newRoomRef = push(ref(rtdb, "rooms"));
 
-    // 방 제목 없을 시 ~ 님의 방으로 생성
     await set(newRoomRef, {
       title: title.trim() ? title : `${nickname} 님의 방`,
       max: 2,
@@ -213,14 +207,11 @@ export const RoomCreateModal = ({
       locked: locked,
     });
 
-    // 팝업 감춤
     setIsCreateOpen(false);
 
-    // 방 이동
     router.replace(`/room/${newRoomRef.key}`);
   };
 
-  // 팝업 열리지 않은 경우 감춤
   if (!isCreateOpen) return false;
 
   const options = [

@@ -137,26 +137,21 @@ interface IRoom {
   hostId: string;
   gameState: "waiting" | "playing";
   locked: boolean;
-  players: IPlayer[];
+  players: Record<string, IPlayer>;
 }
 
 export default function Lobby() {
-  // useRouter
   const router = useRouter();
 
-  // useState
   const [rooms, setRooms] = useState<IRoom[]>([]);
 
   const [userId, setUserId] = useState<string>("");
 
-  // Variable Atom
   const [nickname, setNickname] = useAtom(nicknameAtom);
 
-  // Modal Atom
   const [, setIsCreateOpen] = useAtom(isCreateOpenAtom);
   const [, setIsNicknameOpen] = useAtom(isNicknameOpenAtom);
 
-  // handle
   const handleCreateRoom = () => {
     setIsCreateOpen(true);
   };
@@ -165,9 +160,7 @@ export default function Lobby() {
     setIsNicknameOpen(true);
   };
 
-  // 게스트 유저 설정
   useEffect(() => {
-    // 게스트 유저 정보
     let savedId = localStorage.getItem("userId");
     let savedNickname = localStorage.getItem("userNickname");
 
@@ -177,7 +170,6 @@ export default function Lobby() {
       localStorage.setItem("userId", savedId);
     }
 
-    // 게스트 닉네임 등록
     if (!savedNickname) {
       savedNickname = `회원${Math.floor(Math.random() * 10000)
         .toString()
@@ -185,7 +177,6 @@ export default function Lobby() {
       localStorage.setItem("userNickname", savedNickname);
     }
 
-    // 화면에 적용
     setUserId(savedId);
     setNickname(savedNickname);
 
@@ -198,7 +189,6 @@ export default function Lobby() {
     // 방 불러오기
     const roomsRef = ref(rtdb, "rooms");
 
-    // 실시간 방 확인
     const unsubscribe = onValue(roomsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -219,24 +209,22 @@ export default function Lobby() {
     const userRef = ref(rtdb, `rooms/${roomId}/players/${userId}`);
 
     const result = await runTransaction(roomRef, (currentData) => {
-      // 방 데이터가 없을 시 넘김
       if (!currentData) {
         alert("해당 방이 존재하지 않거나 이미 게임을 시작하였습니다.");
         return;
       }
 
-      // 강제 퇴장된 방인 경우 입장 불가
       if (currentData.banned?.[userId]) {
         alert("퇴장당한 방에는 입장하실 수 없습니다.");
         return;
       }
 
-      // 방에 이미 존재하는 경우 작업 없이 입장
+      // 이미 입장한 상태
       if (currentData.players?.[userId]) {
         return currentData;
       }
 
-      // 플레이어로 입장 가능한 경우 데이터 추가
+      // 플레이어 입장
       const playerCount = Object.keys(currentData.players ?? {}).length;
 
       if (playerCount < currentData.max) {
@@ -251,18 +239,14 @@ export default function Lobby() {
         return currentData;
       }
 
-      // 중도 입장 불가 방인 경우 Block
       if (currentData.locked) {
         alert("관전이 불가능한 방입니다.");
         return;
       }
 
-      // 관전하는 경우
-
-      // 관전자가 없는 경우
+      // 관전 입장
       if (!currentData.spectators) currentData.spectators = {};
 
-      // 관전자 등록
       currentData.spectators[userId] = {
         uid: userId,
         nickname,
@@ -272,7 +256,6 @@ export default function Lobby() {
       return currentData;
     });
 
-    // 입장 가능한 경우
     if (result.committed) {
       onDisconnect(userRef).remove();
       router.replace(`/room/${roomId}`);
