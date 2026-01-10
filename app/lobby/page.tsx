@@ -109,15 +109,22 @@ const HostInfo = styled.p`
   color: #888;
   margin: 0;
 `;
-const RoomCapacity = styled.p`
+const RoomConfig = styled.p`
   position: absolute;
   right: 15px;
   bottom: 7px;
-  font-size: 12pt;
+  font-size: 11pt;
 
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
+  flex-direction: column;
+`;
+const RoomCapacity = styled.p`
+  display: flex;
+`;
+const RoomTime = styled.p`
+  font-size: 10pt;
 `;
 
 const USContainer = styled.div`
@@ -138,6 +145,7 @@ interface IRoom {
   gameState: "waiting" | "playing";
   locked: boolean;
   players: Record<string, IPlayer>;
+  time: string;
 }
 
 export default function Lobby() {
@@ -275,6 +283,16 @@ export default function Lobby() {
     }
   };
 
+  const timeName = (time: string) => {
+    return time === "default"
+      ? "모데라토"
+      : time === "speedy"
+      ? "안단티노"
+      : time === "hyperspeed"
+      ? "프레스토"
+      : "무제한";
+  };
+
   return (
     <LobbyContainer>
       <RoomCreateModal userId={userId} nickname={nickname} />
@@ -296,14 +314,17 @@ export default function Lobby() {
                   <RoomTitle>{room.title}</RoomTitle>
                   <HostInfo>호스트: {room.hostNickname}</HostInfo>
                 </RoomInfoWrapper>
-                <RoomCapacity>
-                  {Object.keys(room.players ?? {}).length}/{room.max}
-                  {room.locked && (
-                    <USContainer>
-                      <UnavailableSpectator />
-                    </USContainer>
-                  )}
-                </RoomCapacity>
+                <RoomConfig>
+                  <RoomTime>{timeName(room.time)}</RoomTime>
+                  <RoomCapacity>
+                    {Object.keys(room.players ?? {}).length}/{room.max}
+                    {room.locked && (
+                      <USContainer>
+                        <UnavailableSpectator />
+                      </USContainer>
+                    )}
+                  </RoomCapacity>
+                </RoomConfig>
               </Room>
             ))}
           <MakeRoom onClick={handleCreateRoom}>
