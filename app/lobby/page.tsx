@@ -13,10 +13,12 @@ import { useAtom } from "jotai";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import styled from "styled-components";
-import { isCreateOpenAtom } from "../atom/roomCreateModalAtom";
+import { isCreateOpenAtom, isNicknameOpenAtom } from "../atom/modalAtom";
 import { RoomCreateModal } from "./components/RoomCreateModal";
-import { levenshtein } from "./tools/Levenshtein";
 import { UnavailableSpectator } from "@/public/svg/LobbySVG";
+import { ChangeNicknameModal } from "./components/ChangeNicknameModal";
+import { nicknameAtom } from "../atom/lobbyAtom";
+import { IPlayer } from "../atom/gameAtom";
 
 /* --- Styles --- */
 const LobbyContainer = styled.div`
@@ -130,29 +132,52 @@ const USContainer = styled.div`
 interface IRoom {
   id: string;
   title: string;
-  current: number;
   max: number;
   hostNickname: string;
   hostId: string;
   gameState: "waiting" | "playing";
   locked: boolean;
+  players: IPlayer[];
 }
 
 export default function Lobby() {
+  // useRouter
   const router = useRouter();
 
-  const [nickname, setNickname] = useState<string>("");
-  const [userId, setUserId] = useState<string>("");
+  // useState
   const [rooms, setRooms] = useState<IRoom[]>([]);
 
+  const [userId, setUserId] = useState<string>("");
+
+  // Variable Atom
+  const [nickname, setNickname] = useAtom(nicknameAtom);
+
+  // Modal Atom
+  const [, setIsCreateOpen] = useAtom(isCreateOpenAtom);
+  const [, setIsNicknameOpen] = useAtom(isNicknameOpenAtom);
+
+  // handle
+  const handleCreateRoom = () => {
+    setIsCreateOpen(true);
+  };
+
+  const handleChangeNickname = () => {
+    setIsNicknameOpen(true);
+  };
+
+  // 게스트 유저 설정
   useEffect(() => {
+    // 게스트 유저 정보
     let savedId = localStorage.getItem("userId");
     let savedNickname = localStorage.getItem("userNickname");
 
+    // 게스트 등록
     if (!savedId) {
       savedId = push(ref(rtdb, "users")).key || "user_" + Date.now();
       localStorage.setItem("userId", savedId);
     }
+
+    // 게스트 닉네임 등록
     if (!savedNickname) {
       savedNickname = `회원${Math.floor(Math.random() * 10000)
         .toString()
@@ -160,18 +185,20 @@ export default function Lobby() {
       localStorage.setItem("userNickname", savedNickname);
     }
 
+    // 화면에 적용
     setUserId(savedId);
     setNickname(savedNickname);
 
-    // 서버에 접속 기록
     set(ref(rtdb, `users/${savedId}`), {
       uid: savedId,
       nickname: savedNickname,
       lastActive: serverTimestamp(),
     });
 
-    // 실시간 방 데이터 수신
+    // 방 불러오기
     const roomsRef = ref(rtdb, "rooms");
+
+    // 실시간 방 확인
     const unsubscribe = onValue(roomsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -186,33 +213,33 @@ export default function Lobby() {
     return () => unsubscribe();
   }, []);
 
-  const [isCreateOpen, setIsCreateOpen] = useAtom(isCreateOpenAtom);
-
-  const handleCreateRoom = async () => {
-    setIsCreateOpen(true);
-  };
-
+  // 방 입장
   const handleEnterRoom = async (roomId: string) => {
     const roomRef = ref(rtdb, `rooms/${roomId}`);
     const userRef = ref(rtdb, `rooms/${roomId}/players/${userId}`);
 
     const result = await runTransaction(roomRef, (currentData) => {
-      if (!currentData) return currentData;
+      // 방 데이터가 없을 시 넘김
+      if (!currentData) {
+        alert("해당 방이 존재하지 않거나 이미 게임을 시작하였습니다.");
+        return;
+      }
 
+      // 강제 퇴장된 방인 경우 입장 불가
       if (currentData.banned?.[userId]) {
         alert("퇴장당한 방에는 입장하실 수 없습니다.");
         return;
       }
 
-      // 이미 플레이어로 들어와 있으면 아무 것도 안 함
+      // 방에 이미 존재하는 경우 작업 없이 입장
       if (currentData.players?.[userId]) {
         return currentData;
       }
 
-      // 플레이어 자리가 남아 있으면 → 플레이어 입장
-      if (currentData.current < currentData.max) {
-        currentData.current = (currentData.current || 0) + 1;
+      // 플레이어로 입장 가능한 경우 데이터 추가
+      const playerCount = Object.keys(currentData.players ?? {}).length;
 
+      if (playerCount < currentData.max) {
         if (!currentData.players) currentData.players = {};
 
         currentData.players[userId] = {
@@ -224,14 +251,18 @@ export default function Lobby() {
         return currentData;
       }
 
+      // 중도 입장 불가 방인 경우 Block
       if (currentData.locked) {
         alert("관전이 불가능한 방입니다.");
         return;
       }
 
-      // 관전자 입장
+      // 관전하는 경우
+
+      // 관전자가 없는 경우
       if (!currentData.spectators) currentData.spectators = {};
 
+      // 관전자 등록
       currentData.spectators[userId] = {
         uid: userId,
         nickname,
@@ -241,53 +272,21 @@ export default function Lobby() {
       return currentData;
     });
 
+    // 입장 가능한 경우
     if (result.committed) {
-      // Disconnect 처리
       onDisconnect(userRef).remove();
       router.replace(`/room/${roomId}`);
     }
   };
 
-  const changeNickname = async () => {
-    const nicknameRef = ref(rtdb, `users/${userId}/nickname`);
-
-    const input = prompt(
-      `닉네임을 변경해 보세요.\n공백으로 제출 시 취소됩니다.`
-    );
-    if (!input) return;
-
-    const nickname = input.trim();
-    if (!nickname) return; // 공백만 입력 시 취소
-
-    if (!/^[가-힣a-zA-Z0-9]+$/.test(nickname)) {
-      alert("닉네임에는 영어, 한글, 숫자만 사용할 수 있습니다.");
-      return;
-    }
-
-    // 금지 단어 비교: 소문자 + 공백 제거
-    const forbidden = ["acrylic", "아크릴릭"];
-    const normalized = nickname.toLowerCase();
-    const isForbidden = forbidden.some(
-      (word) => levenshtein(word, normalized) <= 2
-    );
-
-    if (isForbidden) {
-      alert("운영자를 굉장히 존경하시나 보네요?");
-      return;
-    }
-
-    localStorage.setItem("userNickname", nickname);
-    await set(nicknameRef, nickname);
-    setNickname(nickname);
-  };
-
   return (
     <LobbyContainer>
       <RoomCreateModal userId={userId} nickname={nickname} />
+      <ChangeNicknameModal userId={userId} />
       <Header>
         <Title>한국어 야구 게임</Title>
         <UserNickname>
-          닉네임: <strong onClick={changeNickname}>{nickname}</strong>
+          닉네임: <strong onClick={handleChangeNickname}>{nickname}</strong>
         </UserNickname>
       </Header>
       <Section>
@@ -302,7 +301,7 @@ export default function Lobby() {
                   <HostInfo>호스트: {room.hostNickname}</HostInfo>
                 </RoomInfoWrapper>
                 <RoomCapacity>
-                  {room.current}/{room.max}
+                  {Object.keys(room.players ?? {}).length}/{room.max}
                   {room.locked && (
                     <USContainer>
                       <UnavailableSpectator />

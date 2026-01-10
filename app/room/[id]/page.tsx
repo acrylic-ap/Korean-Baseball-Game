@@ -165,7 +165,6 @@ interface IPlayerData {
 
 interface IRoomData {
   title: string;
-  current: number;
   max: number;
   hostId: string;
   hostNickname: string;
@@ -205,14 +204,13 @@ export default function WaitingRoom() {
       setIsDataLoaded(true);
 
       if (uid && !data.players?.[uid] && !data.spectators?.[uid]) {
-        isLeaving.current = true; // 중복 이동 방지
+        isLeaving.current = true;
         router.replace("/lobby");
         return;
       }
     });
   }, [id]);
 
-  // --- 플레이어 준비 토글 ---
   const toggleReady = () => {
     if (!roomData) return;
 
@@ -223,7 +221,6 @@ export default function WaitingRoom() {
     const playerRef = ref(rtdb, `rooms/${id}/players/${myUid}`);
     set(playerRef, { ...playerData, ready: !playerData.ready });
 
-    // 화면 즉시 반영
     setRoomData((prev) => {
       if (!prev || !prev.players) return prev;
       return {
@@ -242,18 +239,18 @@ export default function WaitingRoom() {
     const uid = localStorage.getItem("userId") || "";
     const nickname = localStorage.getItem("userNickname") || "익명";
 
-    const roomRef = ref(rtdb, `rooms/${id}`);
     const myPlayerRef = ref(rtdb, `rooms/${id}/players/${uid}`);
 
-    // --- 플레이어 정보 등록 + onDisconnect ---
-    if (roomData?.current < 2) {
+    const playerCount = Object.keys(roomData.players ?? {}).length;
+
+    if (playerCount < 2) {
       set(myPlayerRef, {
         uid,
         nickname,
         joinedAt: serverTimestamp(),
         ready: false,
       }).then(() => {
-        onDisconnect(myPlayerRef).remove(); // 강제 종료 시 플레이어 제거
+        onDisconnect(myPlayerRef).remove();
       });
     }
 
@@ -264,7 +261,6 @@ export default function WaitingRoom() {
     };
   }, [id, router]);
 
-  // --- 3. gameState 자동 이동 ---
   useEffect(() => {
     if (!roomData) return;
 
@@ -272,14 +268,11 @@ export default function WaitingRoom() {
       const gameRef = ref(rtdb, `games/${id}`);
       const roomRef = ref(rtdb, `rooms/${id}`);
 
-      // 1. rooms/${id} 데이터를 games/${id}로 이동
       set(gameRef, roomData)
         .then(() => {
-          // 2. room은 삭제
           remove(roomRef).catch(() => {});
         })
         .finally(() => {
-          // 3. 게임 페이지로 이동
           update(gameRef, { gameState: "deciding", remainingTime: 30 });
           router.replace(`/game/${id}`);
         });
@@ -296,7 +289,6 @@ export default function WaitingRoom() {
     : [];
   const isHost = myUid === roomData.hostId;
 
-  // --- 호스트 버튼 활성화: 최소 1명의 참가자가 준비 ---
   const readyPlayers = players.filter((p) => p.uid !== roomData.hostId);
   const allReady =
     readyPlayers.length > 0 && readyPlayers.every((p) => p.ready);
@@ -314,18 +306,14 @@ export default function WaitingRoom() {
       const isPlayer = prev.players && prev.players[myUid];
       const isSpectator = prev.spectators && prev.spectators[myUid];
 
-      // --- 플레이어 나가기 처리 ---
       if (isPlayer) {
         delete prev.players![myUid];
-        prev.current = Math.max(0, (prev.current || 1) - 1);
       }
 
-      // --- 관전자 나가기 처리 (current는 감소 X) ---
       if (isSpectator) {
         delete prev.spectators![myUid];
       }
 
-      // --- 호스트 승계 ---
       if (isPlayer && prev.hostId === myUid) {
         const playersArray = Object.values(prev.players || []) as IPlayerData[];
         if (playersArray.length > 0) {
@@ -339,7 +327,6 @@ export default function WaitingRoom() {
         }
       }
 
-      // --- 방 삭제 조건 ---
       if (
         (!prev.players || Object.keys(prev.players).length === 0) &&
         (!prev.spectators || Object.keys(prev.spectators).length === 0)
@@ -355,22 +342,18 @@ export default function WaitingRoom() {
 
   const banPlayer = async (targetUid: string) => {
     if (!roomData || !myUid) return;
-    if (myUid !== roomData.hostId) return; // 호스트만 가능
+    if (myUid !== roomData.hostId) return;
 
     const roomRef = ref(rtdb, `rooms/${id}`);
 
     await runTransaction(roomRef, (prev) => {
       if (!prev || !prev.players || !prev.players[targetUid]) return prev;
 
-      // --- 대상 플레이어 제거 ---
       delete prev.players[targetUid];
-      prev.current = Math.max(0, (prev.current || 1) - 1);
 
       prev.banned = prev.banned || {};
       prev.banned[targetUid] = true;
 
-      // --- 호스트 승계는 필요 없음, 이미 호스트임 ---
-      // --- 방 삭제 조건 ---
       if (
         (!prev.players || Object.keys(prev.players).length === 0) &&
         (!prev.spectators || Object.keys(prev.spectators).length === 0)
@@ -389,7 +372,7 @@ export default function WaitingRoom() {
         <RoomInfo>
           <RoomTitle>{roomData.title}</RoomTitle>
           <Capacity>
-            {roomData.current} / {roomData.max}
+            {Object.keys(roomData.players ?? {}).length} / {roomData.max}
           </Capacity>
         </RoomInfo>
         {!roomData.locked && (

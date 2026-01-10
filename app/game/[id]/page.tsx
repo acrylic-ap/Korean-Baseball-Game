@@ -24,7 +24,6 @@ import {
   remainingTimeAtom,
 } from "@/app/atom/gameAtom";
 import { SolvingListComponent } from "./components/SolvingListComponent";
-import { userAgent } from "next/server";
 import { getFinal, getInitial, getMedial } from "./tools/getJamo";
 import { TimerComponent } from "./components/TimerComponent";
 import { Host } from "@/public/svg/GameSVG";

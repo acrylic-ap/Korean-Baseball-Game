@@ -1,10 +1,11 @@
-import React, { InputHTMLAttributes, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import { push, ref, set, serverTimestamp } from "firebase/database";
 import { rtdb } from "@/lib/client";
 import { useRouter } from "next/navigation";
-import { isCreateOpenAtom } from "@/app/atom/roomCreateModalAtom";
+import { isCreateOpenAtom } from "@/app/atom/modalAtom";
 import { useAtom } from "jotai";
+import Select from "react-dropdown-select";
 
 const Overlay = styled.div`
   position: fixed;
@@ -72,14 +73,81 @@ const Button = styled.button<{ $primary?: boolean }>`
   }
 `;
 
+const TimeRow = styled.div`
+  display: flex;
+  align-items: center;
+
+  font-size: 11pt;
+
+  margin-bottom: 5px;
+`;
+
+const TimeSelect = styled(Select)`
+  border: 1px solid #444;
+  border-radius: 8px;
+
+  color: white;
+  font-size: 14px;
+
+  &,
+  &:focus-within {
+    border-color: #676767 !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  .react-dropdown-select-content {
+    width: 100%;
+    height: 100%;
+
+    font-size: 10pt;
+
+    display: flex;
+
+    margin-left: 5px;
+
+    cursor: pointer;
+  }
+
+  .react-dropdown-select-dropdown {
+    background: #1a1a1a;
+
+    border-color: #676767;
+  }
+
+  .react-dropdown-select-item {
+    padding: 10px 12px;
+
+    border-color: #676767;
+
+    cursor: pointer;
+
+    font-size: 13px;
+
+    &:hover {
+      background: #2a2a2a;
+    }
+  }
+
+  .react-dropdown-select-item-selected {
+    border: 1px solid #676767 !important;
+    background: #575757 !important; /* 배경색 (예: 연한 빨강) */
+    color: #fff !important; /* 글자색 */
+  }
+`;
+
+const TimeText = styled.p`
+  margin-right: 10px;
+`;
+
 const OptionRow = styled.label`
   display: flex;
   align-items: center;
   justify-content: flex-end;
 
-  gap: 6px;
+  gap: 3px;
 
-  font-size: 10pt;
+  font-size: 11pt;
   margin-bottom: 15px;
 
   cursor: pointer;
@@ -96,20 +164,39 @@ export const RoomCreateModal = ({
   userId: string;
   nickname: string;
 }) => {
+  // useRouter
   const router = useRouter();
-  const [title, setTitle] = useState("");
+
+  // useState
   const [loading, setLoading] = useState(false);
-  const [isCreateOpen, setIsCreateOpen] = useAtom(isCreateOpenAtom);
   const [locked, setLocked] = useState(false);
 
+  const [title, setTitle] = useState("");
+  const [time, setTime] = useState<any[]>([
+    { label: "기본", value: "default" },
+  ]);
+
+  // Variable Atom
+  const [isCreateOpen, setIsCreateOpen] = useAtom(isCreateOpenAtom);
+
+  // 자동 포커싱
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (inputRef.current) inputRef.current.focus();
+  }, [isCreateOpen]);
+
+  // 방 생성
   const handleCreate = async () => {
+    // 중복 클릭 방지
     setLoading(true);
 
+    // 방 데이터 생성
     const newRoomRef = push(ref(rtdb, "rooms"));
 
+    // 방 제목 없을 시 ~ 님의 방으로 생성
     await set(newRoomRef, {
       title: title.trim() ? title : `${nickname} 님의 방`,
-      current: 1,
       max: 2,
       hostId: userId,
       hostNickname: nickname,
@@ -122,21 +209,25 @@ export const RoomCreateModal = ({
           joinedAt: serverTimestamp(),
         },
       },
+      time: time[0].value,
       locked: locked,
     });
 
+    // 팝업 감춤
     setIsCreateOpen(false);
 
+    // 방 이동
     router.replace(`/room/${newRoomRef.key}`);
   };
 
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (inputRef.current) inputRef.current.focus();
-  }, [isCreateOpen]);
-
+  // 팝업 열리지 않은 경우 감춤
   if (!isCreateOpen) return false;
+
+  const options = [
+    { value: "speedy", label: "타임 어택" },
+    { value: "default", label: "기본" },
+    { value: "infinity", label: "무제한" },
+  ];
 
   return (
     <Overlay onClick={() => setIsCreateOpen(false)}>
@@ -152,13 +243,25 @@ export const RoomCreateModal = ({
           ref={inputRef}
         />
 
+        <TimeRow>
+          <TimeText>시간 설정</TimeText>
+          <TimeSelect
+            style={{ width: "100px" }}
+            options={options}
+            values={time}
+            onChange={(values) => setTime(values)}
+            searchable={false}
+            backspaceDelete={false}
+          />
+        </TimeRow>
+
         <OptionRow>
+          중도 입장 불가
           <Checkbox
             type="checkbox"
             checked={locked}
             onChange={(e) => setLocked(e.target.checked)}
           />
-          중도 입장 불가
         </OptionRow>
 
         <ButtonRow>
