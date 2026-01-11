@@ -14,6 +14,7 @@ import {
   update,
 } from "firebase/database";
 import { BanIcon, SpectatorEye } from "@/public/svg/RoomSVG";
+import { timeName } from "@/app/tools/time_name";
 
 /* --- Styles --- */
 const RoomContainer = styled.div`
@@ -41,16 +42,25 @@ const BackButton = styled.button`
     background: #333;
   }
 `;
+
 const RoomInfo = styled.div`
   width: 70%;
 
   margin-left: 20px;
 `;
+
 const RoomTitle = styled.h1`
   font-size: 1.5rem;
   margin: 0;
+  margin-bottom: 2px;
 `;
+
 const Capacity = styled.span`
+  color: #aaa;
+  font-size: 0.9rem;
+`;
+
+const GameTime = styled.p`
   color: #aaa;
   font-size: 0.9rem;
 `;
@@ -442,6 +452,7 @@ export default function WaitingRoom() {
         <BackButton onClick={leaveRoom}>← 나가기</BackButton>
         <RoomInfo>
           <RoomTitle>{roomData.title}</RoomTitle>
+          <GameTime>{timeName(roomData.time)}</GameTime>
           <Capacity>
             {Object.keys(roomData.players ?? {}).length} / {roomData.max}
           </Capacity>

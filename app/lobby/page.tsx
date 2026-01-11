@@ -26,6 +26,7 @@ import { nicknameAtom } from "../atom/lobbyAtom";
 import { IPlayer } from "../atom/gameAtom";
 import { LoginModal } from "./components/LoginModal";
 import { getAuth, signOut } from "firebase/auth";
+import { timeName } from "../tools/time_name";
 
 /* --- Styles --- */
 const LobbyContainer = styled.div`
@@ -392,16 +393,6 @@ export default function Lobby() {
       onDisconnect(participateRef).remove();
       router.replace(`/room/${roomId}`);
     }
-  };
-
-  const timeName = (time: string) => {
-    return time === "default"
-      ? "모데라토"
-      : time === "speedy"
-      ? "안단티노"
-      : time === "hyperspeed"
-      ? "프레스토"
-      : "무제한";
   };
 
   useEffect(() => {
