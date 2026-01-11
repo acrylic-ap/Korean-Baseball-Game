@@ -130,6 +130,10 @@ const BanIconContainer = styled.div`
   display: flex;
 `;
 
+const PlayerButtonContainer = styled.div`
+  flex-direction: row;
+`;
+
 const StartButton = styled.button`
   background-color: #ffd700;
   color: black;
@@ -147,6 +151,11 @@ const StartButton = styled.button`
     cursor: not-allowed;
   }
 `;
+
+const SpectateButton = styled(StartButton)`
+  margin-left: 8px;
+`;
+
 const Loading = styled.div`
   display: flex;
   justify-content: center;
@@ -379,6 +388,43 @@ export default function WaitingRoom() {
     });
   };
 
+  const participateAsPlayer = () => {
+    const roomRef = ref(rtdb, `rooms/${id}`);
+
+    runTransaction(roomRef, (prev) => {
+      if (!prev) return prev;
+
+      delete prev.spectators?.[myUid];
+      prev.players = prev.players || {};
+      prev.players[myUid] = {
+        uid: myUid,
+        nickname: localStorage.getItem("userNickname") || "익명",
+        joinedAt: serverTimestamp(),
+        ready: false,
+      };
+
+      return prev;
+    });
+  };
+
+  const switchToSpectator = () => {
+    const roomRef = ref(rtdb, `rooms/${id}`);
+
+    runTransaction(roomRef, (prev) => {
+      if (!prev) return prev;
+
+      delete prev.players?.[myUid];
+      prev.spectators = prev.spectators || {};
+      prev.spectators[myUid] = {
+        uid: myUid,
+        nickname: localStorage.getItem("userNickname") || "익명",
+        joinedAt: serverTimestamp(),
+      };
+
+      return prev;
+    });
+  };
+
   return (
     <RoomContainer>
       <Header>
@@ -427,26 +473,38 @@ export default function WaitingRoom() {
           </PlayerList>
         </StatusBoard>
 
-        {roomData.players &&
-          roomData.players[myUid] &&
-          roomData.gameState === "waiting" && (
-            <>
-              {isHost ? (
-                <StartButton
-                  disabled={!allReady}
-                  onClick={() =>
-                    set(ref(rtdb, `rooms/${id}/gameState`), "playing")
-                  }
-                >
-                  게임 시작
-                </StartButton>
-              ) : (
+        {roomData.gameState === "waiting" && (
+          <>
+            {isHost ? (
+              <StartButton
+                disabled={!allReady}
+                onClick={() =>
+                  set(ref(rtdb, `rooms/${id}/gameState`), "playing")
+                }
+              >
+                게임 시작
+              </StartButton>
+            ) : roomData.players && roomData.players[myUid] ? (
+              <PlayerButtonContainer>
                 <StartButton onClick={toggleReady}>
                   {roomData.players?.[myUid]?.ready ? "준비 취소" : "준비"}
                 </StartButton>
-              )}
-            </>
-          )}
+                <SpectateButton onClick={switchToSpectator}>
+                  관전
+                </SpectateButton>
+              </PlayerButtonContainer>
+            ) : (
+              <StartButton
+                onClick={participateAsPlayer}
+                disabled={Object.keys(roomData?.players ?? {}).length === 2}
+              >
+                {Object.keys(roomData?.players ?? {}).length === 1
+                  ? "참여하기"
+                  : "참여 불가"}
+              </StartButton>
+            )}
+          </>
+        )}
       </GameSection>
     </RoomContainer>
   );
