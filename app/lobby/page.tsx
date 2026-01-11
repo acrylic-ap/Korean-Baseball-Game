@@ -8,17 +8,24 @@ import {
   set,
   serverTimestamp,
   onDisconnect,
+  get,
 } from "firebase/database";
 import { useAtom } from "jotai";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import styled from "styled-components";
-import { isCreateOpenAtom, isNicknameOpenAtom } from "../atom/modalAtom";
+import {
+  isCreateOpenAtom,
+  isLoginOpenAtom,
+  isNicknameOpenAtom,
+} from "../atom/modalAtom";
 import { RoomCreateModal } from "./components/RoomCreateModal";
 import { UnavailableSpectator } from "@/public/svg/LobbySVG";
 import { ChangeNicknameModal } from "./components/ChangeNicknameModal";
 import { nicknameAtom } from "../atom/lobbyAtom";
 import { IPlayer } from "../atom/gameAtom";
+import { LoginModal } from "./components/LoginModal";
+import { getAuth, signOut } from "firebase/auth";
 
 /* --- Styles --- */
 const LobbyContainer = styled.div`
@@ -37,15 +44,39 @@ const Title = styled.p`
   font-size: 23pt;
   font-weight: 600;
 `;
-const UserNickname = styled.div`
+
+const UserContainer = styled.div`
   margin-right: 30px;
-  font-size: 14pt;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+`;
+
+const UserNickname = styled.div`
+  margin-right: 10px;
+
   color: #ccc;
+  font-size: 14pt;
+
   strong {
     color: #fff;
     margin-left: 5px;
   }
 `;
+
+const LoginButton = styled.button`
+  background-color: transparent;
+
+  width: 70px;
+  height: 30px;
+
+  border: 1px solid gray;
+
+  color: white;
+`;
+
 const Section = styled.section`
   width: 100%;
   height: 90%;
@@ -152,13 +183,16 @@ export default function Lobby() {
   const router = useRouter();
 
   const [rooms, setRooms] = useState<IRoom[]>([]);
-
-  const [userId, setUserId] = useState<string>("");
+  const [userId, setUserId] = useState<string | null>(null);
+  const [guestId, setGuestId] = useState<string>("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [nicknameLoaded, setNicknameLoaded] = useState(false);
 
   const [nickname, setNickname] = useAtom(nicknameAtom);
 
   const [, setIsCreateOpen] = useAtom(isCreateOpenAtom);
-  const [, setIsNicknameOpen] = useAtom(isNicknameOpenAtom);
+  const [isNicknameOpen, setIsNicknameOpen] = useAtom(isNicknameOpenAtom);
+  const [, setIsLoginOpen] = useAtom(isLoginOpenAtom);
 
   const handleCreateRoom = () => {
     setIsCreateOpen(true);
@@ -168,31 +202,98 @@ export default function Lobby() {
     setIsNicknameOpen(true);
   };
 
+  const handleLogin = () => {
+    setIsLoginOpen(true);
+  };
+
+  const initAuthUser = async () => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user) return;
+
+    // 게스트 정보 정리
+    const prevGuestId = localStorage.getItem("guestId");
+    if (prevGuestId) {
+      await set(ref(rtdb, `guests/${prevGuestId}`), null);
+      localStorage.removeItem("guestId");
+      localStorage.removeItem("guestNickname");
+    }
+
+    setUserId(user.uid);
+    setIsLoggedIn(true);
+
+    // 🔥 DB에서 유저 정보 로딩
+    const userRef = ref(rtdb, `users/${user.uid}`);
+    const snapshot = await get(userRef);
+
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      setNickname(data.nickname);
+    } else {
+      // fallback (이론상 거의 안 탐)
+      setNickname(user.displayName || "익명");
+    }
+
+    setNicknameLoaded(true);
+  };
+
+  useEffect(() => {
+    const auth = getAuth();
+
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      console.log(user);
+      if (user) {
+        initAuthUser();
+      } else {
+        initGuestUser();
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    const auth = getAuth();
+
+    try {
+      await signOut(auth);
+      setIsLoggedIn(false);
+    } catch (e) {
+      console.warn("로그아웃에 실패했습니다.", e);
+    }
+  };
+
   const initGuestUser = () => {
     // 게스트 생성 / 불러오기
-    let savedId = localStorage.getItem("userId");
-    let savedNickname = localStorage.getItem("userNickname");
+    let guestId = localStorage.getItem("guestId");
+    let guestNickname = localStorage.getItem("guestNickname");
 
-    if (!savedId) {
-      savedId = push(ref(rtdb, "users")).key || "user_" + Date.now();
-      localStorage.setItem("userId", savedId);
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userNickname");
+
+    if (!guestId) {
+      guestId = push(ref(rtdb, "guests")).key || "guest_" + Date.now();
+      localStorage.setItem("guestId", guestId);
     }
 
-    if (!savedNickname) {
-      savedNickname = `회원${Math.floor(Math.random() * 10000)
+    if (!guestNickname) {
+      guestNickname = `회원${Math.floor(Math.random() * 10000)
         .toString()
         .padStart(4, "0")}`;
-      localStorage.setItem("userNickname", savedNickname);
+      localStorage.setItem("guestNickname", guestNickname);
     }
 
-    setUserId(savedId);
-    setNickname(savedNickname);
+    setUserId(null);
+    setGuestId(guestId);
+    setNickname(guestNickname);
 
-    set(ref(rtdb, `users/${savedId}`), {
-      uid: savedId,
-      nickname: savedNickname,
+    set(ref(rtdb, `guests/${guestId}`), {
+      uid: guestId,
+      nickname: guestNickname,
       lastActive: serverTimestamp(),
     });
+
+    setNicknameLoaded(true);
   };
 
   const subscribeRooms = () => {
@@ -216,7 +317,6 @@ export default function Lobby() {
   };
 
   useEffect(() => {
-    initGuestUser();
     const unsubscribeRooms = subscribeRooms();
 
     return () => {
@@ -228,10 +328,16 @@ export default function Lobby() {
   const handleEnterRoom = async (roomId: string) => {
     const roomRef = ref(rtdb, `rooms/${roomId}`);
     const userRef = ref(rtdb, `rooms/${roomId}/players/${userId}`);
+    // const guestRef = ref(rtdb, `rooms/${roomId}/players/${guestId}`);
 
     const result = await runTransaction(roomRef, (currentData) => {
       if (!currentData) {
         alert("해당 방이 존재하지 않거나 이미 게임을 시작하였습니다.");
+        return;
+      }
+
+      if (!userId) {
+        alert("아너무무섭다");
         return;
       }
 
@@ -293,15 +399,40 @@ export default function Lobby() {
       : "무제한";
   };
 
+  useEffect(() => {
+    if (nicknameLoaded && nickname === "닉네임 없음") {
+      setIsNicknameOpen(true);
+    }
+  }, [nickname, isNicknameOpen, nicknameLoaded]);
+
+  if (!nicknameLoaded) return null;
+
   return (
     <LobbyContainer>
-      <RoomCreateModal userId={userId} nickname={nickname} />
-      <ChangeNicknameModal userId={userId} />
+      <RoomCreateModal userId={userId || guestId} nickname={nickname} />
+      <ChangeNicknameModal userId={userId || guestId} />
+      <LoginModal />
       <Header>
         <Title>Kotcher</Title>
-        <UserNickname>
-          닉네임: <strong onClick={handleChangeNickname}>{nickname}</strong>
-        </UserNickname>
+        <UserContainer>
+          <UserNickname>
+            닉네임:{" "}
+            <strong
+              onClick={() => {
+                userId
+                  ? handleChangeNickname
+                  : alert("로그인을 통해 닉네임을 변경해 주세요!");
+              }}
+            >
+              {nickname}
+            </strong>
+          </UserNickname>
+          {isLoggedIn ? (
+            <LoginButton onClick={handleLogout}>로그아웃</LoginButton>
+          ) : (
+            <LoginButton onClick={handleLogin}>로그인</LoginButton>
+          )}
+        </UserContainer>
       </Header>
       <Section>
         <RoomContainer>

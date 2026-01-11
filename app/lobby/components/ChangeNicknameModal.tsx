@@ -104,7 +104,7 @@ export const ChangeNicknameModal = ({ userId }: { userId: string }) => {
       return;
     }
 
-    if (!/^[가-힣a-zA-Z0-9]+$/.test(check)) {
+    if (!/^[ㄱ-힣a-zA-Z0-9]+$/.test(check)) {
       alert("닉네임에는 영어, 한글, 숫자만 사용할 수 있습니다.");
       return;
     }
