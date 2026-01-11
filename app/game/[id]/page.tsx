@@ -474,8 +474,11 @@ export default function GameRoom() {
     if (!id) return;
 
     const getMyUserData = async () => {
-      const myUserId = localStorage.getItem("userId") || "";
-      const userRef = ref(rtdb, `users/${myUserId}`);
+      const myUserId =
+        localStorage.getItem("userId") || localStorage.getItem("guestId") || "";
+      const userRef = localStorage.getItem("userId")
+        ? ref(rtdb, `users/${myUserId}`)
+        : ref(rtdb, `guests/${myUserId}`);
       const user = await get(userRef).then(
         (snapshot) => snapshot.val() as IUser
       );
@@ -513,7 +516,8 @@ export default function GameRoom() {
     if (!id || !myUserInfo) return;
 
     const gameRef = ref(rtdb, `games/${id}`);
-    const myUserId = localStorage.getItem("userId") || "";
+    const myUserId =
+      localStorage.getItem("userId") || localStorage.getItem("guestId") || "";
 
     get(gameRef).then((snapshot) => {
       if (!snapshot.exists()) {
@@ -567,7 +571,6 @@ export default function GameRoom() {
 
       if (data.gameState === "end") {
         setPlayGameSet(true);
-        console.log("?");
       }
 
       if (!isHost) return;

@@ -247,8 +247,12 @@ export default function WaitingRoom() {
   useEffect(() => {
     if (!id || !roomData) return;
 
-    const uid = localStorage.getItem("userId") || "";
-    const nickname = localStorage.getItem("userNickname") || "익명";
+    const uid =
+      localStorage.getItem("userId") || localStorage.getItem("guestId") || "";
+    const nickname =
+      localStorage.getItem("userNickname") ||
+      localStorage.getItem("guestNickname") ||
+      "익명";
 
     const myPlayerRef = ref(rtdb, `rooms/${id}/players/${uid}`);
 
@@ -399,7 +403,10 @@ export default function WaitingRoom() {
       prev.players = prev.players || {};
       prev.players[myUid] = {
         uid: myUid,
-        nickname: localStorage.getItem("userNickname") || "익명",
+        nickname:
+          localStorage.getItem("userNickname") ||
+          localStorage.getItem("guestNickname") ||
+          "익명",
         joinedAt: serverTimestamp(),
         ready: false,
       };
@@ -418,7 +425,10 @@ export default function WaitingRoom() {
       prev.spectators = prev.spectators || {};
       prev.spectators[myUid] = {
         uid: myUid,
-        nickname: localStorage.getItem("userNickname") || "익명",
+        nickname:
+          localStorage.getItem("userNickname") ||
+          localStorage.getItem("guestNickname") ||
+          "익명",
         joinedAt: serverTimestamp(),
       };
 

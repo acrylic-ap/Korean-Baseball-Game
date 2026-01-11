@@ -241,7 +241,6 @@ export default function Lobby() {
     const auth = getAuth();
 
     const unsubscribe = auth.onAuthStateChanged((user) => {
-      console.log(user);
       if (user) {
         initAuthUser();
       } else {
