@@ -327,8 +327,10 @@ export default function Lobby() {
   // 방 입장
   const handleEnterRoom = async (roomId: string) => {
     const roomRef = ref(rtdb, `rooms/${roomId}`);
-    const userRef = ref(rtdb, `rooms/${roomId}/players/${userId}`);
-    // const guestRef = ref(rtdb, `rooms/${roomId}/players/${guestId}`);
+
+    let role: "players" | "spectators" = "players";
+
+    const participateId = userId ? userId : guestId;
 
     const result = await runTransaction(roomRef, (currentData) => {
       if (!currentData) {
@@ -336,18 +338,13 @@ export default function Lobby() {
         return;
       }
 
-      if (!userId) {
-        alert("아너무무섭다");
-        return;
-      }
-
-      if (currentData.banned?.[userId]) {
+      if (currentData.banned?.[participateId]) {
         alert("퇴장당한 방에는 입장하실 수 없습니다.");
         return;
       }
 
       // 이미 입장한 상태
-      if (currentData.players?.[userId]) {
+      if (currentData.players?.[participateId]) {
         return currentData;
       }
 
@@ -355,10 +352,12 @@ export default function Lobby() {
       const playerCount = Object.keys(currentData.players ?? {}).length;
 
       if (playerCount < currentData.max) {
+        role = "players";
+
         if (!currentData.players) currentData.players = {};
 
-        currentData.players[userId] = {
-          uid: userId,
+        currentData.players[participateId] = {
+          uid: participateId,
           nickname,
           joinedAt: Date.now(),
         };
@@ -371,11 +370,13 @@ export default function Lobby() {
         return;
       }
 
+      role = "spectators";
+
       // 관전 입장
       if (!currentData.spectators) currentData.spectators = {};
 
-      currentData.spectators[userId] = {
-        uid: userId,
+      currentData.spectators[participateId] = {
+        uid: participateId,
         nickname,
         joinedAt: Date.now(),
       };
@@ -383,8 +384,13 @@ export default function Lobby() {
       return currentData;
     });
 
+    const participateRef = ref(
+      rtdb,
+      `rooms/${roomId}/${role}/${participateId}`
+    );
+
     if (result.committed) {
-      onDisconnect(userRef).remove();
+      onDisconnect(participateRef).remove();
       router.replace(`/room/${roomId}`);
     }
   };
@@ -409,8 +415,8 @@ export default function Lobby() {
 
   return (
     <LobbyContainer>
-      <RoomCreateModal userId={userId || guestId} nickname={nickname} />
-      <ChangeNicknameModal userId={userId || guestId} />
+      <RoomCreateModal userId={userId ?? guestId} nickname={nickname} />
+      {userId && <ChangeNicknameModal userId={userId} />}
       <LoginModal />
       <Header>
         <Title>Kotcher</Title>

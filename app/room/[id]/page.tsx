@@ -204,7 +204,8 @@ export default function WaitingRoom() {
   useEffect(() => {
     const roomRef = ref(rtdb, `rooms/${id}`);
 
-    const uid = localStorage.getItem("userId") || "";
+    const uid =
+      localStorage.getItem("userId") || localStorage.getItem("guestId") || "";
     setMyUid(uid);
 
     return onValue(roomRef, (snapshot) => {

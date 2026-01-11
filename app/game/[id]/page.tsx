@@ -490,7 +490,8 @@ export default function GameRoom() {
     if (!id) return;
 
     const gameRef = ref(rtdb, `games/${id}`);
-    const myUserId = localStorage.getItem("userId") || "";
+    const myUserId =
+      localStorage.getItem("userId") || localStorage.getItem("guestId") || "";
 
     return onValue(gameRef, (snapshot) => {
       const snapshotData = snapshot.val();
