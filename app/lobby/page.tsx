@@ -298,7 +298,7 @@ export default function Lobby() {
       <RoomCreateModal userId={userId} nickname={nickname} />
       <ChangeNicknameModal userId={userId} />
       <Header>
-        <Title>한국어 야구 게임</Title>
+        <Title>Kotcher</Title>
         <UserNickname>
           닉네임: <strong onClick={handleChangeNickname}>{nickname}</strong>
         </UserNickname>
