@@ -11,6 +11,7 @@ import {
   push,
   onChildAdded,
   set,
+  serverTimestamp,
 } from "firebase/database";
 import { styled } from "styled-components";
 import React from "react";
@@ -29,6 +30,7 @@ import { SolvingListComponent } from "./components/SolvingListComponent";
 import { getFinal, getInitial, getMedial } from "./tools/getJamo";
 import { TimerComponent } from "./components/TimerComponent";
 import { Host } from "@/public/svg/GameSVG";
+import { IRoomData } from "@/app/room/[id]/page";
 
 const GamePage = styled.div`
   background: linear-gradient(135deg, #242424 0%, #0b0b0b 100%);
@@ -291,6 +293,8 @@ const LobbyButton = styled.button`
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   }
 `;
+
+const ReturnRoomButton = styled(LobbyButton)``;
 
 // Chat
 
@@ -934,18 +938,90 @@ export default function GameRoom() {
   }, [chatList]);
 
   const back = async () => {
-    const chatsRef = ref(rtdb, `chats/${id}`);
-    const nicknameRef = ref(rtdb, `games/${id}/players/${myId}/nickname`);
+    if (!id || !myId || !game) return;
 
-    const nickname = await (await get(nicknameRef)).val();
+    const gameRef = ref(rtdb, `games/${id}`);
+    const chatsRef = ref(rtdb, `chats/${id}`);
+
+    update(gameRef, {
+      requestBack: { ...(game.requestBack ?? {}), [myId]: true },
+    });
 
     push(chatsRef, {
       nickname: "System",
-      message: `${nickname} 님이 게임에서 나가셨습니다.`,
+      message: "유저가 대기실 이동을 요청하고 있습니다.",
+    });
+  };
+
+  const getNicknameByUid = (uid: string): string => {
+    if (!game || game.spectators) return "Guest";
+
+    // userId인지 guestId인지 확인 후 가져오기
+    const user = game.players?.[uid] || game.spectators?.[uid]; // 예시
+    return user?.nickname ?? "Guest";
+  };
+
+  const gameToRoomData = (game: IGame): IRoomData => ({
+    title: game.title,
+    max: game.max,
+    hostId: game.hostId,
+    hostNickname: game.hostNickname,
+    gameState: "waiting",
+    players: game.players
+      ? Object.fromEntries(
+          Object.entries(game.players).map(([uid, p]) => [
+            uid,
+            { uid, nickname: p.nickname, joinedAt: p.joinedAt ?? Date.now() },
+          ])
+        )
+      : undefined,
+    spectators: game.spectators
+      ? Object.fromEntries(
+          Object.entries(game.spectators).map(([uid, p]) => [
+            uid,
+            {
+              uid,
+              nickname: getNicknameByUid(uid),
+              joinedAt: Date.now(),
+            },
+          ])
+        )
+      : {},
+    locked: game.locked ?? false,
+    time: game.time ?? "default",
+  });
+
+  useEffect(() => {
+    if (!id || !myId) return;
+
+    const gameRef = ref(rtdb, `games/${id}`);
+
+    const unsub = onValue(gameRef, async (snap) => {
+      const game = snap.val();
+      if (!game) return; // 🔥 null 체크 필수
+
+      const players = game.players ?? {};
+      const requestBack = game.requestBack ?? {};
+      const playerIds = Object.keys(players);
+
+      if (playerIds.length === 0) return;
+
+      const allRequested = playerIds.every((uid) => requestBack[uid]);
+      if (!allRequested) return;
+
+      const roomData = gameToRoomData(game);
+
+      const updates: Record<string, any> = {};
+      updates[`rooms/${id}`] = roomData;
+      updates[`games/${id}`] = null; // 게임 제거
+
+      await update(ref(rtdb), updates);
+
+      router.replace(`/room/${id}`);
     });
 
-    router.replace("/lobby");
-  };
+    return () => unsub();
+  }, [id, myId]);
 
   if (!game) return <div>로딩중...</div>;
 
@@ -1094,7 +1170,7 @@ export default function GameRoom() {
                     : "오류"}
                 </EndTitle>
                 {isPlaying && <Answer>정답: {correctWord}</Answer>}
-                <LobbyButton onClick={back}>돌아가기</LobbyButton>
+                <ReturnRoomButton onClick={back}>돌아가기</ReturnRoomButton>
               </EndFieldContainer>
             </EndContainer>
           )

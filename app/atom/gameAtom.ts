@@ -7,6 +7,7 @@ export interface IUser {
 }
 
 export interface IPlayer {
+  joinedAt: number;
   uid: string;
   nickname: string;
   guessWord?: string;
@@ -21,6 +22,7 @@ export interface IGame {
   currentOrder?: string;
   winner?: string;
   gameState: "deciding" | "ordering" | "solving" | "end";
+  requestBack?: Record<string, boolean>;
   guessStack?: {
     word: string;
     result: string;
@@ -31,6 +33,9 @@ export interface IGame {
   spectators?: {
     userId: string;
   }
+  max: number;
+  locked: boolean;
+  hostNickname: string;
 }
 
 export const myIdAtom = atom<string | null>(null);

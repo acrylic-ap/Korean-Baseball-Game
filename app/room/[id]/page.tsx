@@ -182,7 +182,7 @@ interface IPlayerData {
   ready?: boolean;
 }
 
-interface IRoomData {
+export interface IRoomData {
   title: string;
   max: number;
   hostId: string;
